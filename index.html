@@ -1,118 +1,1809 @@
-from flask import Flask, render_template_string, jsonify
-from openpyxl import load_workbook
-import requests
-from io import BytesIO
 
-app = Flask(__name__)
-
-EXCEL_URL = 'https://raw.githubusercontent.com/Maritoost/KNW/main/Split_KennisNetwerk_Projects_version4.xlsx'
-
-def get_excel_data():
-    response = requests.get(EXCEL_URL)
-    workbook = load_workbook(filename=BytesIO(response.content))
-    sheet = workbook.active
-    projects = {
-        'Droogte': [],
-        'Waterkwaliteit': [],
-        'Wateroverlast': []
-    }
-    for row in sheet.iter_rows(min_row=2, values_only=True):
-        project = {
-            'ID': row[0],
-            'FocusArea': row[1],
-            'ProjectName': row[2],
-            'Hoofduitvoerder': row[3],
-            'Samenvatting': row[4],
-            'Bereik': row[5],
-            'Financieringsbron': row[6],
-            'Organisatietype': row[7],
-            'Samenwerkingspartners': row[8],
-            'Gebruiker': row[9],
-            'Website': row[10]
-        }
-        projects[project['FocusArea']].append(project)
-    return projects
-
-projects_data = get_excel_data()
-
-@app.route('/')
-def index():
-    return render_template_string(template, projects=projects_data)
-
-template = '''
 <!DOCTYPE html>
 <html lang="nl">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Kennisnetwerk Water</title>
-    <style>
-        body { font-family: Arial, sans-serif; margin: 0; padding: 20px; background-color: #f4f4f4; }
-        .bubble { width: 200px; height: 200px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; color: white; font-size: 20px; font-weight: bold; cursor: pointer; margin: 10px; }
-        #droogte { background-color: #ff6347; }
-        #waterkwaliteit { background-color: #6ab150; }
-        #wateroverlast { background-color: #4682b4; }
-        .hidden { display: none; }
-        footer { font-style: italic; font-size: 12px; text-align: center; margin-top: 20px; }
-        .project { margin: 10px 0; }
-        .details { display: none; margin-left: 20px; font-size: 1em; }
-        .project-name { font-size: 1em; font-style: italic; cursor: pointer; color: black; text-decoration: underline; }
-    </style>
-    <script>
-        let lastOpen = null;
-        function toggleDetails(projectId) {
-            const details = document.getElementById(`details-${projectId}`);
-            if (lastOpen && lastOpen !== details) {
-                lastOpen.style.display = 'none';
-            }
-            details.style.display = details.style.display === 'none' ? 'block' : 'none';
-            lastOpen = details.style.display === 'none' ? null : details;
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kennisnetwerk Water</title>
+<style>
+    body { font-family: Arial, sans-serif; margin: 0; padding: 20px; background-color: #f4f4f4; }
+    .bubble { width: 200px; height: 200px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; color: white; font-size: 20px; font-weight: bold; cursor: pointer; margin: 10px; }
+    #droogte { background-color: #ff6347; }
+    #waterkwaliteit { background-color: #6ab150; }
+    #wateroverlast { background-color: #4682b4; }
+    .hidden { display: none; }
+    footer { font-style: italic; font-size: 12px; text-align: center; margin-top: 20px; }
+    .project { margin: 10px 0; }
+    .details { display: none; margin-left: 20px; font-size: 1em; }
+    .project-name { font-size: 1em; font-style: italic; cursor: pointer; color: black; text-decoration: underline; }
+</style>
+<script>
+    let lastOpen = null;
+    function toggleDetails(projectId) {
+        const details = document.getElementById(`details-${projectId}`);
+        if (lastOpen && lastOpen !== details) {
+            lastOpen.style.display = 'none';
         }
-        let lastVisible = null;
-        function toggleVisibility(focusArea) {
-            const element = document.getElementById(focusArea + "-projects");
-            if (lastVisible && lastVisible !== element) {
-                lastVisible.classList.add('hidden');
-            }
-            element.classList.toggle('hidden');
-            lastVisible = element.classList.contains('hidden') ? null : element;
+        details.style.display = details.style.display === 'none' ? 'block' : 'none';
+        lastOpen = details.style.display === 'none' ? null : details;
+    }
+    let lastVisible = null;
+    function toggleVisibility(focusArea) {
+        const element = document.getElementById(focusArea + "-projects");
+        if (lastVisible && lastVisible !== element) {
+            lastVisible.classList.add('hidden');
         }
-    </script>
+        element.classList.toggle('hidden');
+        lastVisible = element.classList.contains('hidden') ? null : element;
+    }
+</script>
 </head>
 <body>
-    <h1>Kennisnetwerk Water</h1>
-    <p style="font-size: 24px; font-weight: bold;">Focusgebieden:</p>
-    <div class="bubble" id="droogte" onclick="toggleVisibility('droogte')">Droogte</div>
-    <div class="bubble" id="waterkwaliteit" onclick="toggleVisibility('waterkwaliteit')">Waterkwaliteit</div>
-    <div class="bubble" id="wateroverlast" onclick="toggleVisibility('wateroverlast')">Wateroverlast</div>
+<h1>Kennisnetwerk Water</h1>
+<p style="font-size: 24px; font-weight: bold;">Focusgebieden:</p>
+<div class="bubble" id="droogte" onclick="toggleVisibility('droogte')">Droogte</div>
+<div class="bubble" id="waterkwaliteit" onclick="toggleVisibility('waterkwaliteit')">Waterkwaliteit</div>
+<div class="bubble" id="wateroverlast" onclick="toggleVisibility('wateroverlast')">Wateroverlast</div>
 
-    {% for focus_area, projects in projects.items() %}
-    <div id='{{ focus_area.lower() }}-projects' class='hidden'>
-        <ul>
-            {% for project in projects %}
-            <li><span class='project-name' onclick="toggleDetails('{{ project['ID'] }}')">{{ project['ProjectName'] }}</span>
-                <div id="details-{{ project['ID'] }}" class="details">
-                    <p><strong>Hoofduitvoerder:</strong> {{ project['Hoofduitvoerder'] }}</p>
-                    <p><strong>Samenvatting:</strong> {{ project['Samenvatting'] }}</p>
-                    <p><strong>Bereik:</strong> {{ project['Bereik'] }}</p>
-                    <p><strong>Financieringsbron:</strong> {{ project['Financieringsbron'] }}</p>
-                    <p><strong>Organisatietype:</strong> {{ project['Organisatietype'] }}</p>
-                    <p><strong>Samenwerkingspartners:</strong> {{ project['Samenwerkingspartners'] }}</p>
-                    <p><strong>Gebruiker:</strong> {{ project['Gebruiker'] }}</p>
-                    <p><strong>Website:</strong> <a href="{{ project['Website'] }}" target="_blank">{{ project['Website'] }}</a></p>
-                </div>
-            </li>
-            {% endfor %}
-        </ul>
+<div id='droogte-projects' class='hidden'><ul>
+<li><span class='project-name' onclick="toggleDetails('6-Agro-Voedselzekerheid-Droogte')">Agro Voedselzekerheid</span>
+    <div id="details-6-Agro-Voedselzekerheid-Droogte" class="details">
+        <p><strong>Hoofduitvoerder:</strong> NSO</p>
+        <p><strong>Samenvatting:</strong> Dit project richt zich op het bieden van oplossingen voor maatschappelijke vraagstukken op het gebied van landbouw, water en voedselzekerheid. Satellietdata wordt gebruikt om gewasopbrengsten, vegetatiestress, neerslag, verdamping, luchttemperatuur, wind en zonne-instraling in kaart te brengen en korte termijn voorspellingen te doen.</p>
+        <p><strong>Bereik:</strong> Nederland</p>
+        <p><strong>Financieringsbron:</strong> SBIR door NSO</p>
+        <p><strong>Organisatietype:</strong> Overheid</p>
+        <p><strong>Samenwerkingspartners:</strong> -</p>
+        <p><strong>Gebruiker:</strong> Landbouwers en boeren, Waterbeheer organisaties</p>
+        <p><strong>Website:</strong> <a href="https://www.spaceoffice.nl/files/SBIR/VA_agro_voedselzekerheid.pdf" target="_blank">https://www.spaceoffice.nl/files/SBIR/VA_agro_voedselzekerheid.pdf</a></p>
     </div>
-    {% endfor %}
+</li>
 
-    <footer>
-        <p>© Kennisnetwerk Water Projecten</p>
-    </footer>
+<li><span class='project-name' onclick="toggleDetails('11-Beregeningsmonitor-Droogte')">Beregeningsmonitor</span>
+    <div id="details-11-Beregeningsmonitor-Droogte" class="details">
+        <p><strong>Hoofduitvoerder:</strong> eLEAF</p>
+        <p><strong>Samenvatting:</strong> De Beregeningsmonitor helpt waterschappen bij het monitoren van beregeningsmaatregelen door verschillende data te integreren en inzicht te geven in waar en wanneer beregening plaatsvindt. Dit ondersteunt een duurzame en eerlijke verdeling van watervoorraden en helpt bij de handhaving van onttrekkingsverboden.</p>
+        <p><strong>Bereik:</strong> Nederland</p>
+        <p><strong>Financieringsbron:</strong> STOWA, Hoogheemraadschap van Rijnland, Hoogheemraadschap van de Stichtse Rijnlanden, Waterschap Vallei en Veluwe, Waterschap Hunze en Aaâ€™s, Waterschap Scheldestromen, Waterschap Zuiderzeeland</p>
+        <p><strong>Organisatietype:</strong> Bedrijf</p>
+        <p><strong>Samenwerkingspartners:</strong> STOWA, HydroLogic</p>
+        <p><strong>Gebruiker:</strong> Waterschappen, beleidsmakers, agrariërs</p>
+        <p><strong>Website:</strong> <a href="https://www.stowa.nl/nieuws/hoe-ondersteunt-de-beregeningsmonitor-de-waterschappen" target="_blank">https://www.stowa.nl/nieuws/hoe-ondersteunt-de-beregeningsmonitor-de-waterschappen</a></p>
+    </div>
+</li>
+
+<li><span class='project-name' onclick="toggleDetails('15-Climate-Change-Initiative-Anthropogenic-Water-Use-(CCI-AWU)-Droogte')">Climate Change Initiative Anthropogenic Water Use (CCI-AWU)</span>
+    <div id="details-15-Climate-Change-Initiative-Anthropogenic-Water-Use-(CCI-AWU)-Droogte" class="details">
+        <p><strong>Hoofduitvoerder:</strong> ESA</p>
+        <p><strong>Samenvatting:</strong> Het CCI-AWU project richt zich op het ontwikkelen van langetermijn tijdreeksen van antropogeen watergebruik, met de nadruk op irrigatie, door middel van remote sensing waarnemingen. Het project beoogt het begrijpen van menselijke verstoringen op het hydrologische systeem en het verbeteren van agro-hydrologische modellen.</p>
+        <p><strong>Bereik:</strong> Mondiaal</p>
+        <p><strong>Financieringsbron:</strong> ESA</p>
+        <p><strong>Organisatietype:</strong> Organisatie</p>
+        <p><strong>Samenwerkingspartners:</strong> National Research Council of Italy, TU Wien, University of Perugia, Politecnico di Milano, KU Leuven</p>
+        <p><strong>Gebruiker:</strong> Beleidsmakers, hydrologen, landbouwers, waterschappen</p>
+        <p><strong>Website:</strong> <a href="https://climate.esa.int/en/projects/anthropogenic-water-use/" target="_blank">https://climate.esa.int/en/projects/anthropogenic-water-use/</a></p>
+    </div>
+</li>
+
+<li><span class='project-name' onclick="toggleDetails('18-CoMET:-Slimme-modelkoppeling-voor-betere-actuele-verdampingsschatting-Droogte')">CoMET: Slimme modelkoppeling voor betere actuele verdampingsschatting</span>
+    <div id="details-18-CoMET:-Slimme-modelkoppeling-voor-betere-actuele-verdampingsschatting-Droogte" class="details">
+        <p><strong>Hoofduitvoerder:</strong> FutureWater</p>
+        <p><strong>Samenvatting:</strong> CoMET (Coupled Models for EvapoTranspiration) combineert een satellietgebaseerd energiebalansmodel (ET-Look) en een hydrologisch model (SPHY) om nauwkeurige verdampingsdata te leveren, zelfs op bewolkte dagen. Dit helpt waterschappen bij het beter beheren van waterbronnen en anticiperen op waterbehoeften.</p>
+        <p><strong>Bereik:</strong> Nederland</p>
+        <p><strong>Financieringsbron:</strong> SBIR door NSO</p>
+        <p><strong>Organisatietype:</strong> Bedrijf</p>
+        <p><strong>Samenwerkingspartners:</strong> eLEAF, SAT-WATER, RVO</p>
+        <p><strong>Gebruiker:</strong> Waterschappen, landbouwsector, waterbeheerders</p>
+        <p><strong>Website:</strong> <a href="https://www.futurewater.nl/projects/comet/" target="_blank">https://www.futurewater.nl/projects/comet/</a></p>
+    </div>
+</li>
+
+<li><span class='project-name' onclick="toggleDetails('21-Copernicus-Climate-Change-Service-(C3S)-Droogte')">Copernicus Climate Change Service (C3S)</span>
+    <div id="details-21-Copernicus-Climate-Change-Service-(C3S)-Droogte" class="details">
+        <p><strong>Hoofduitvoerder:</strong> ECMWF</p>
+        <p><strong>Samenvatting:</strong> C3S biedt gratis toegang tot klimaatgegevens en hulpmiddelen voor monitoring en mitigatie van de gevolgen van klimaatverandering. Het helpt beleidsmakers en onderzoekers om beter geïnformeerde beslissingen te nemen met betrekking tot klimaatadaptatie en -mitigatie.</p>
+        <p><strong>Bereik:</strong> Mondiaal</p>
+        <p><strong>Financieringsbron:</strong> Europese Commissie</p>
+        <p><strong>Organisatietype:</strong> Organisatie</p>
+        <p><strong>Samenwerkingspartners:</strong> KNMI (Koninklijk Nederlands Meteorologisch Instituut), Met Office (VK), MeteoFrance (Frankrijk), DWD (Deutscher Wetterdienst), SMHI (Sweden), BSC (Barcelona Supercomputing Center), CNRS (Centre National de la Recherche Scientifique, Frankrijk), CMCC (Centro Euro-Mediterraneo sui Cambiamenti Climatici, Italië), EUMETSAT (European Organisation for the Exploitation of Meteorological Satellites)</p>
+        <p><strong>Gebruiker:</strong> Beleidsmakers, klimaatonderzoekers, waterbeheerders, landbouwsector, stadsplanners</p>
+        <p><strong>Website:</strong> <a href="https://climate.copernicus.eu/" target="_blank">https://climate.copernicus.eu/</a></p>
+    </div>
+</li>
+
+<li><span class='project-name' onclick="toggleDetails('29-Droogte-inspectie-en-monitoring-van-kades-Droogte')">Droogte-inspectie en monitoring van kades</span>
+    <div id="details-29-Droogte-inspectie-en-monitoring-van-kades-Droogte" class="details">
+        <p><strong>Hoofduitvoerder:</strong> Hoogheemraadschap van Rijnland</p>
+        <p><strong>Samenvatting:</strong> Dit project richt zich op het gebruik van satellietdata om droogtegevoelige en kwetsbare kades binnen het beheergebied van het Hoogheemraadschap van Rijnland in kaart te brengen. Hierdoor kunnen inspecties efficiënter en effectiever plaatsvinden.</p>
+        <p><strong>Bereik:</strong> Nederland</p>
+        <p><strong>Financieringsbron:</strong> SBIR door NSO</p>
+        <p><strong>Organisatietype:</strong> Overheid</p>
+        <p><strong>Samenwerkingspartners:</strong> nan</p>
+        <p><strong>Gebruiker:</strong> Overheid</p>
+        <p><strong>Website:</strong> <a href="https://www.spaceoffice.nl/files/SBIR/Rijnland_kades.pdf" target="_blank">https://www.spaceoffice.nl/files/SBIR/Rijnland_kades.pdf</a></p>
+    </div>
+</li>
+
+<li><span class='project-name' onclick="toggleDetails('30-Droogtemonitoring-in-waterlopen-Droogte')">Droogtemonitoring in waterlopen</span>
+    <div id="details-30-Droogtemonitoring-in-waterlopen-Droogte" class="details">
+        <p><strong>Hoofduitvoerder:</strong> NEO</p>
+        <p><strong>Samenvatting:</strong> Het project richt zich op het monitoren van droogte in waterlopen met behulp van zeer hoge resolutie optische en radar satellietdata. Dit helpt waterschappen actuele data te verkrijgen over de droogte van waterlopen en mogelijke ecologische schade.</p>
+        <p><strong>Bereik:</strong> Nederland</p>
+        <p><strong>Financieringsbron:</strong> Waterschap Aa en Maas</p>
+        <p><strong>Organisatietype:</strong> Bedrijf</p>
+        <p><strong>Samenwerkingspartners:</strong> Waterschap Aa en Maas, Capella Space</p>
+        <p><strong>Gebruiker:</strong> Waterschap Aa en Maas, waterbeheerders, beleidsmakers</p>
+        <p><strong>Website:</strong> <a href="https://www.neo.nl/nieuwsarchief/wateroverlast-monitoring/" target="_blank">https://www.neo.nl/nieuwsarchief/wateroverlast-monitoring/</a></p>
+    </div>
+</li>
+
+<li><span class='project-name' onclick="toggleDetails('32-Droogteportaal-Droogte')">Droogteportaal</span>
+    <div id="details-32-Droogteportaal-Droogte" class="details">
+        <p><strong>Hoofduitvoerder:</strong> KnowH2O</p>
+        <p><strong>Samenvatting:</strong> Het project onderzoekt de droogte in de zandgebieden van Zuid-, Midden- en Oost-Nederland tijdens de jaren 2018 en 2019. Het analyseert de effecten van droogte op de waterhuishouding, natuur en landbouw, en evalueert de effectiviteit van mogelijke maatregelen om beter bestand te zijn tegen droogte.</p>
+        <p><strong>Bereik:</strong> Nederland</p>
+        <p><strong>Financieringsbron:</strong> Provincie Noord-Brabant, Gelderland, Limburg, Utrecht, Overijssel, Drenthe; Waterschap WL, WAM, WDD, WBD, WVV, WRIJ, WVS, WDOD; Natuurmonumenten, Staatsbosbeheer; MinLNV; Deltaplan Hoge Zandgronden, Deltafonds</p>
+        <p><strong>Organisatietype:</strong> Bedrijf</p>
+        <p><strong>Samenwerkingspartners:</strong> Deltares, KWR, Flip Witte Ecohydrologie, WUR-SLM, HSS</p>
+        <p><strong>Gebruiker:</strong> Beleidsmakers, natuurbeheerders, agrariërs, wetenschappers</p>
+        <p><strong>Website:</strong> <a href="https://www.knowh2o.nl/projecten/droogte-zandgronden-nederland-droogte-in-zandgebieden-van-zuid-midden-en-oost-nederland-het-verhaal-analyse-van-droogte-2018-en-2019-en-bevindingen/" target="_blank">https://www.knowh2o.nl/projecten/droogte-zandgronden-nederland-droogte-in-zandgebieden-van-zuid-midden-en-oost-nederland-het-verhaal-analyse-van-droogte-2018-en-2019-en-bevindingen/</a></p>
+    </div>
+</li>
+
+<li><span class='project-name' onclick="toggleDetails('33-Droogtescan-Droogte')">Droogtescan</span>
+    <div id="details-33-Droogtescan-Droogte" class="details">
+        <p><strong>Hoofduitvoerder:</strong> Miramap</p>
+        <p><strong>Samenvatting:</strong> Het project Droogtescan richt zich op het monitoren en analyseren van droogte in Nederland door middel van geavanceerde remote sensing technieken. Het doel is om een beter begrip te krijgen van de droogtepatronen en de impact ervan op verschillende sectoren.</p>
+        <p><strong>Bereik:</strong> Nederland</p>
+        <p><strong>Financieringsbron:</strong> SBIR door NSO</p>
+        <p><strong>Organisatietype:</strong> Bedrijf</p>
+        <p><strong>Samenwerkingspartners:</strong> NSO</p>
+        <p><strong>Gebruiker:</strong> Waterbeheerders, beleidsmakers, agrariërs, natuurbeheerders</p>
+        <p><strong>Website:</strong> <a href="https://www.miramap.nl/" target="_blank">https://www.miramap.nl/</a></p>
+    </div>
+</li>
+
+<li><span class='project-name' onclick="toggleDetails('34-Drought-Observatories-of-the-Copernicus-Emergency-Management-Service-Droogte')">Drought Observatories of the Copernicus Emergency Management Service</span>
+    <div id="details-34-Drought-Observatories-of-the-Copernicus-Emergency-Management-Service-Droogte" class="details">
+        <p><strong>Hoofduitvoerder:</strong> JRC</p>
+        <p><strong>Samenvatting:</strong> De Drought Observatories (EDO en GDO) bieden vroegtijdige waarschuwingen en uitgebreide informatie over droogte in Europa en wereldwijd. Ze gebruiken satellietgegevens, hydrometeorologische modellen en in situ gegevens om droogte-indicatoren te leveren en ondersteunen besluitvorming en droogtebeheer.</p>
+        <p><strong>Bereik:</strong> Mondiaal</p>
+        <p><strong>Financieringsbron:</strong> Copernicus Programma</p>
+        <p><strong>Organisatietype:</strong> Instituut</p>
+        <p><strong>Samenwerkingspartners:</strong> CEMS, ESA, WMO, National Meteorological and Hydrological Services (NMHSs), en verschillende agentschappen en instellingen van EU-lidstaten die betrokken zijn bij milieumonitoring en rampenbestrijding</p>
+        <p><strong>Gebruiker:</strong> Beleidsmakers, waterbeheerders, landbouwers, onderzoekers</p>
+        <p><strong>Website:</strong> <a href="drought.emergency.copernicus.eu" target="_blank">drought.emergency.copernicus.eu</a></p>
+    </div>
+</li>
+
+<li><span class='project-name' onclick="toggleDetails('35-Duinwacht-Droogte')">Duinwacht</span>
+    <div id="details-35-Duinwacht-Droogte" class="details">
+        <p><strong>Hoofduitvoerder:</strong> 52impact</p>
+        <p><strong>Samenvatting:</strong> monitoring van de impact van verdroging van natuurgebieden, waarbij neerslagdata wordt gecombineerd met verdampingsdata en vegetatie-indices. Dit project is gestart met focus op duinen, maar zal vanaf begin juni gericht worden op alle soorten natuurgebieden binnen een SBIR-project. Op habitatniveau wordt sensitiviteit van gebieden voor historische verdroging en veerkracht na verdroging inzichtelijk gemaakt, en waar mogelijk een relatie gelegd met biodiversiteit.</p>
+        <p><strong>Bereik:</strong> Nederland</p>
+        <p><strong>Financieringsbron:</strong> SBIR door NSO</p>
+        <p><strong>Organisatietype:</strong> Bedrijf</p>
+        <p><strong>Samenwerkingspartners:</strong> Maastricht Sustainablity Institute en Provincie Zeeland</p>
+        <p><strong>Gebruiker:</strong> Hoogheemraadschap De Stichtse Rijnlanden, rijkswaterstaat (mogelijk)</p>
+        <p><strong>Website:</strong> <a href="https://www.52impact.nl/" target="_blank">https://www.52impact.nl/</a></p>
+    </div>
+</li>
+
+<li><span class='project-name' onclick="toggleDetails('36-Dynamisch-peilbeheer-Droogte')">Dynamisch peilbeheer</span>
+    <div id="details-36-Dynamisch-peilbeheer-Droogte" class="details">
+        <p><strong>Hoofduitvoerder:</strong> STOWA</p>
+        <p><strong>Samenvatting:</strong> Dynamisch peilbeheer anticipeert op weersomstandigheden binnen vooraf vastgestelde peilmarges. Het optimaliseert de waterhuishouding voor agrarisch gebruik, voorkomt droogteschade en vermindert bodemdaling door veenafbraak. Het systeem speelt in op de huidige en verwachte grondwatersituatie.</p>
+        <p><strong>Bereik:</strong> Nederland</p>
+        <p><strong>Financieringsbron:</strong> Eigen financiering</p>
+        <p><strong>Organisatietype:</strong> Organisatie</p>
+        <p><strong>Samenwerkingspartners:</strong> Waterschappen, Deltares, Rijkswaterstaat</p>
+        <p><strong>Gebruiker:</strong> Agrariërs, Waterschappen, Waterbeheerders</p>
+        <p><strong>Website:</strong> <a href="stowa.nl" target="_blank">stowa.nl</a></p>
+    </div>
+</li>
+
+<li><span class='project-name' onclick="toggleDetails('52-Global-Surface-Water-Explorer-Droogte')">Global Surface Water Explorer</span>
+    <div id="details-52-Global-Surface-Water-Explorer-Droogte" class="details">
+        <p><strong>Hoofduitvoerder:</strong> JRC</p>
+        <p><strong>Samenvatting:</strong> De Global Surface Water Explorer (GSWE) biedt kaarten en statistieken van de locatie, verspreiding en veranderingen in de oppervlaktewateren wereldwijd over de afgelopen 3,8 decennia. Het ondersteunt waterbeheer, klimaatmodellering, biodiversiteitsbehoud en voedselzekerheid.</p>
+        <p><strong>Bereik:</strong> Mondiaal</p>
+        <p><strong>Financieringsbron:</strong> Copernicus Programma</p>
+        <p><strong>Organisatietype:</strong> Instituut</p>
+        <p><strong>Samenwerkingspartners:</strong> UN Environment, Google Earth Engine</p>
+        <p><strong>Gebruiker:</strong> Waterbeheerders, beleidsmakers, onderzoekers, milieuorganisaties</p>
+        <p><strong>Website:</strong> <a href="global-surface-water.appspot.com" target="_blank">global-surface-water.appspot.com</a></p>
+    </div>
+</li>
+
+<li><span class='project-name' onclick="toggleDetails('54-Groenmonitor-Droogte')">Groenmonitor</span>
+    <div id="details-54-Groenmonitor-Droogte" class="details">
+        <p><strong>Hoofduitvoerder:</strong> Wageningen University & Research</p>
+        <p><strong>Samenvatting:</strong> De Groenmonitor biedt een actuele vegetatiekaart van Nederland op basis van satellietbeelden. De groenindex (NDVI) wordt berekend voor onbewolkte satellietbeelden, wat helpt bij het volgen van gewasontwikkeling en natuurprocessen.</p>
+        <p><strong>Bereik:</strong> Nederland</p>
+        <p><strong>Financieringsbron:</strong> Ministerie van Economische Zaken en Klimaat</p>
+        <p><strong>Organisatietype:</strong> Universiteit</p>
+        <p><strong>Samenwerkingspartners:</strong> ESA, diverse gemeenten</p>
+        <p><strong>Gebruiker:</strong> Landbouwers, Natuurbeheerders, Overheden</p>
+        <p><strong>Website:</strong> <a href="https://www.groenmonitor.nl/" target="_blank">https://www.groenmonitor.nl/</a></p>
+    </div>
+</li>
+
+<li><span class='project-name' onclick="toggleDetails('59-HydroNET-Droogte')">HydroNET</span>
+    <div id="details-59-HydroNET-Droogte" class="details">
+        <p><strong>Hoofduitvoerder:</strong> Hydrologic</p>
+        <p><strong>Samenvatting:</strong> HydroNET is een cloud-gebaseerd besluitvormingsondersteunend systeem dat waterbeheerders helpt om beter te anticiperen op extreme weersomstandigheden door datagestuurde waterbeheerbeslissingen mogelijk te maken. Het platform integreert gegevens uit verschillende bronnen, creëert waterintelligentie door middel van data science en modellering, en genereert dashboards, geautomatiseerde rapporten en persoonlijke waarschuwingen die zijn afgestemd op de behoeften van personeel en belanghebbenden.</p>
+        <p><strong>Bereik:</strong> Mondiaal</p>
+        <p><strong>Financieringsbron:</strong> Eigen financiering</p>
+        <p><strong>Organisatietype:</strong> Bedrijf</p>
+        <p><strong>Samenwerkingspartners:</strong> Arcadis US, Arcadis UK, HydroLogic</p>
+        <p><strong>Gebruiker:</strong> Waterbeheerders, overheidsinstanties, kennisinstituten, steden en gemeenten, nationale weersdiensten</p>
+        <p><strong>Website:</strong> <a href="https://www.hydronet.nl/" target="_blank">https://www.hydronet.nl/</a></p>
+    </div>
+</li>
+
+<li><span class='project-name' onclick="toggleDetails('63-IMPREX-(Improving-Predictions-and-Management-of-Hydrological-Extremes)-Droogte')">IMPREX (Improving Predictions and Management of Hydrological Extremes)</span>
+    <div id="details-63-IMPREX-(Improving-Predictions-and-Management-of-Hydrological-Extremes)-Droogte" class="details">
+        <p><strong>Hoofduitvoerder:</strong> FutureWater</p>
+        <p><strong>Samenvatting:</strong> IMPREX richt zich op het verbeteren van voorspellings- en beheersmogelijkheden van hydrologische extremen, zoals droogtes en overstromingen. Het project streeft naar betere weersvoorspellingen, klimaatprognoses en risicobeoordelingen om de kwetsbaarheid van Europa voor deze extremen te verminderen.</p>
+        <p><strong>Bereik:</strong> Europa</p>
+        <p><strong>Financieringsbron:</strong> Horizon 2020</p>
+        <p><strong>Organisatietype:</strong> Bedrijf</p>
+        <p><strong>Samenwerkingspartners:</strong> KNMI, ECMWF, SMHI, IRSTEA, PIK, ARCTIK, BSC, MetOffice, Technical University of Crete, University of Reading, HZG, Deltares, Vrije University Amsterdam, Adelphi, HKV, CETAQUA, Universidad Politécnica de Valencia, POLITECNICO MILANO, Cima, GFZ,BFG, Water Footprint Network</p>
+        <p><strong>Gebruiker:</strong> Beleidsmakers, waterbeheerders, verzekeringsmaatschappijen, landbouwsector</p>
+        <p><strong>Website:</strong> <a href="https://www.imprex.eu/" target="_blank">https://www.imprex.eu/</a></p>
+    </div>
+</li>
+
+<li><span class='project-name' onclick="toggleDetails('65-Integrated-Water-Management-using-Satellite-Information-Droogte')">Integrated Water Management using Satellite Information</span>
+    <div id="details-65-Integrated-Water-Management-using-Satellite-Information-Droogte" class="details">
+        <p><strong>Hoofduitvoerder:</strong> Hoogheemraadschap De Stichtse Rijnlanden</p>
+        <p><strong>Samenvatting:</strong> Het project richt zich op het gebruik van satellietdata voor het monitoren van evapotranspiratie en gewasgroei. Dit helpt bij het nauwkeuriger schatten van de waterbalans en het optimaliseren van waterallocatie in de regio.</p>
+        <p><strong>Bereik:</strong> Nederland</p>
+        <p><strong>Financieringsbron:</strong> Eigen financiering</p>
+        <p><strong>Organisatietype:</strong> Overheid</p>
+        <p><strong>Samenwerkingspartners:</strong> eLEAF, andere Nederlandse waterschappen (SAT-WATER groep)</p>
+        <p><strong>Gebruiker:</strong> Waterbeheerders, landbouwers, beleidsmakers</p>
+        <p><strong>Website:</strong> <a href="https://www.eurisy.eu/stories/water-board-de-stichtse-rijnlanden-integrated-water-management-using-satellite-information_58/" target="_blank">https://www.eurisy.eu/stories/water-board-de-stichtse-rijnlanden-integrated-water-management-using-satellite-information_58/</a></p>
+    </div>
+</li>
+
+<li><span class='project-name' onclick="toggleDetails('70-Klimaateffectatlas-Droogte')">Klimaateffectatlas</span>
+    <div id="details-70-Klimaateffectatlas-Droogte" class="details">
+        <p><strong>Hoofduitvoerder:</strong> Stichting Climate Adaptation Services (CAS)</p>
+        <p><strong>Samenvatting:</strong> De Klimaateffectatlas biedt uitgebreide informatie over de gevolgen van klimaatverandering in Nederland. Het bevat kaarten en data over overstromingen, droogte, hitte, en wateroverlast om beleidsmakers en planners te helpen bij het nemen van adaptatiemaatregelen.</p>
+        <p><strong>Bereik:</strong> Nederland</p>
+        <p><strong>Financieringsbron:</strong> Ministerie van Infrastructuur en Waterstaat</p>
+        <p><strong>Organisatietype:</strong> Instituut</p>
+        <p><strong>Samenwerkingspartners:</strong> Deltares, KNMI, Wageningen University & Research, TNO, Rijkswaterstaat, PBL</p>
+        <p><strong>Gebruiker:</strong> Beleidsmakers, gemeenten, waterschappen, burgers</p>
+        <p><strong>Website:</strong> <a href="klimaateffectatlas.nl" target="_blank">klimaateffectatlas.nl</a></p>
+    </div>
+</li>
+
+<li><span class='project-name' onclick="toggleDetails('77-Measuring-the-value-of-water-Droogte')">Measuring the value of water</span>
+    <div id="details-77-Measuring-the-value-of-water-Droogte" class="details">
+        <p><strong>Hoofduitvoerder:</strong> 2C Degrees</p>
+        <p><strong>Samenvatting:</strong> 2C Degrees combineert satellietbeelden en kunstmatige intelligentie om inzichten te bieden in watertekorten en prijspatronen, waardoor besluitvorming over waterveiligheid en prijsschommelingen wordt ondersteund.</p>
+        <p><strong>Bereik:</strong> Mondiaal</p>
+        <p><strong>Financieringsbron:</strong> ESA BIC Noordwijk</p>
+        <p><strong>Organisatietype:</strong> Bedrijf</p>
+        <p><strong>Samenwerkingspartners:</strong> -</p>
+        <p><strong>Gebruiker:</strong> Bedrijven zoals papierfabrieken, nutsbedrijven, vermogensbeheerders, en organisaties die zich bezighouden met ESG criteria, inclusief pensioenfondsen van publieke sectoren, kerken en vakbonden.</p>
+        <p><strong>Website:</strong> <a href="https://www.sbicnoordwijk.nl/2c-degrees-measuring-value-of-water-esabic/" target="_blank">https://www.sbicnoordwijk.nl/2c-degrees-measuring-value-of-water-esabic/</a></p>
+    </div>
+</li>
+
+<li><span class='project-name' onclick="toggleDetails('80-Monitoring-and-Modeling-the-Groningen-Subsurface-Droogte')">Monitoring and Modeling the Groningen Subsurface</span>
+    <div id="details-80-Monitoring-and-Modeling-the-Groningen-Subsurface-Droogte" class="details">
+        <p><strong>Hoofduitvoerder:</strong> TU Delft</p>
+        <p><strong>Samenvatting:</strong> Dit project maakt gebruik van InSAR-satellietgegevens en geodetische data-assimilatie om de complexe aard van bodemdaling in Groningen te modelleren. Door het integreren van deze gegevens met grondwaarheidsdata en bodemprocessenmodellen, wordt gestreefd naar een beter begrip van de bodemdaling.</p>
+        <p><strong>Bereik:</strong> Nederland</p>
+        <p><strong>Financieringsbron:</strong> NWO (DeepNL)</p>
+        <p><strong>Organisatietype:</strong> Universiteit</p>
+        <p><strong>Samenwerkingspartners:</strong> Universiteit Utrecht, TNO, Deltares, NAM</p>
+        <p><strong>Gebruiker:</strong> Overheden, Wetenschappers, Beleidsmakers</p>
+        <p><strong>Website:</strong> <a href="https://repository.tudelft.nl/islandora/object/uuid%3A3052905a-17e1-4b97-808b-af038b224b97" target="_blank">https://repository.tudelft.nl/islandora/object/uuid%3A3052905a-17e1-4b97-808b-af038b224b97</a></p>
+    </div>
+</li>
+
+<li><span class='project-name' onclick="toggleDetails('82-Multi-satellite-and-multi-sensor-application-for-large-scale-groundwater-assessment---calibration-and-data-assimilation-Droogte')">Multi-satellite and multi-sensor application for large-scale groundwater assessment - calibration and data-assimilation</span>
+    <div id="details-82-Multi-satellite-and-multi-sensor-application-for-large-scale-groundwater-assessment---calibration-and-data-assimilation-Droogte" class="details">
+        <p><strong>Hoofduitvoerder:</strong> Universiteit Utrecht</p>
+        <p><strong>Samenvatting:</strong> Dit project gebruikt multi-sensor remote sensing samen met een grootschalig grondwatermodel om de dynamiek van grondwater in het Rijn-Maas stroomgebied te monitoren. Het richt zich op modelkalibratie en data-assimilatie om de nauwkeurigheid van grondwaterpeilvoorspellingen te verbeteren.</p>
+        <p><strong>Bereik:</strong> Nederland</p>
+        <p><strong>Financieringsbron:</strong> NWO (DeepNL)</p>
+        <p><strong>Organisatietype:</strong> Universiteit</p>
+        <p><strong>Samenwerkingspartners:</strong> TNO, Deltares, NAM, Universiteit Utrecht</p>
+        <p><strong>Gebruiker:</strong> Waterschappen, Waterbeheerders, Milieuonderzoekers</p>
+        <p><strong>Website:</strong> <a href="https://www.nwo.nl/en/projects/mp-226-11-0" target="_blank">https://www.nwo.nl/en/projects/mp-226-11-0</a></p>
+    </div>
+</li>
+
+<li><span class='project-name' onclick="toggleDetails('88-Next-Generation-Drought-Index-(D-NGDI)-Droogte')">Next Generation Drought Index (D-NGDI)</span>
+    <div id="details-88-Next-Generation-Drought-Index-(D-NGDI)-Droogte" class="details">
+        <p><strong>Hoofduitvoerder:</strong> Deltares</p>
+        <p><strong>Samenvatting:</strong> De Next Generation Drought Index (D-NGDI) van Deltares biedt tijdige en relevante droogte-informatie voor specifieke sectoren op lokaal niveau in data-arme regio's. Het combineert big data, aardobservatie, hydrologische modellen en datascience technieken in een gebruiksvriendelijke webviewer. Dit helpt lokale waterbeheerders om actie te ondernemen voor en tijdens droogteperiodes.</p>
+        <p><strong>Bereik:</strong> Mondiaal</p>
+        <p><strong>Financieringsbron:</strong> Eigen Financiering, samenwerkingsverbanden</p>
+        <p><strong>Organisatietype:</strong> Instituut</p>
+        <p><strong>Samenwerkingspartners:</strong> Rode Kruis, Wereldbank, Nederlandse overheid, lokale overheden en diverse partners binnen projecten zoals Stars4Water, KLIMAP en Grow-with-the-Flow</p>
+        <p><strong>Gebruiker:</strong> Waterbeheerders, NGO's, landbouwsector, waterleidingbedrijven, hydro-elektrische sector, scheepvaartsector, (her)verzekeringsmaatschappijen</p>
+        <p><strong>Website:</strong> <a href="https://www.deltares.nl/en/expertise/projects/next-generation-drought-index" target="_blank">https://www.deltares.nl/en/expertise/projects/next-generation-drought-index</a></p>
+    </div>
+</li>
+
+<li><span class='project-name' onclick="toggleDetails('90-OWASIS-Droogte')">OWASIS</span>
+    <div id="details-90-OWASIS-Droogte" class="details">
+        <p><strong>Hoofduitvoerder:</strong> Hydrologic</p>
+        <p><strong>Samenvatting:</strong> OWASIS biedt operationele informatieproducten voor het monitoren van bodemvocht, grondwaterstand en beschikbare bodemberging. Dit helpt waterbeheerders om effectievere operationele beslissingen te nemen over het aanvoeren of vasthouden van water, vooral tijdens droge of natte periodes.</p>
+        <p><strong>Bereik:</strong> Mondiaal</p>
+        <p><strong>Financieringsbron:</strong> STOWA, ESA, NSO</p>
+        <p><strong>Organisatietype:</strong> Bedrijf</p>
+        <p><strong>Samenwerkingspartners:</strong> Hoogheemraadschap De Stichtse Rijnlanden, WENR, Rijkswaterstaat</p>
+        <p><strong>Gebruiker:</strong> Waterbeheerders, beleidsmakers</p>
+        <p><strong>Website:</strong> <a href="https://www.owasis.nl/over-owasis/" target="_blank">https://www.owasis.nl/over-owasis/</a></p>
+    </div>
+</li>
+
+<li><span class='project-name' onclick="toggleDetails('93-Planet-Fusion-Droogte')">Planet Fusion</span>
+    <div id="details-93-Planet-Fusion-Droogte" class="details">
+        <p><strong>Hoofduitvoerder:</strong> Planet</p>
+        <p><strong>Samenvatting:</strong> Planet Fusion is een geavanceerd dataverwerkingsplatform dat gebruikmaakt van satellietbeelden van de PlanetScope-constellatie en andere bronnen om tijdkritische, locatie-specifieke inzichten te bieden over dynamische landoppervlakteprocessen. Het systeem integreert verschillende satellietsensoren om radiometrisch nauwkeurige en consistent gegeorefereerde gegevens te leveren.</p>
+        <p><strong>Bereik:</strong> Mondiaal</p>
+        <p><strong>Financieringsbron:</strong> Eigen financiering</p>
+        <p><strong>Organisatietype:</strong> Bedrijf</p>
+        <p><strong>Samenwerkingspartners:</strong> -</p>
+        <p><strong>Gebruiker:</strong> Landbouwers, Milieuonderzoekers, Overheden</p>
+        <p><strong>Website:</strong> <a href="https://assets.planet.com/docs/Fusion-Tech-Spec_v1.0.0.pdf" target="_blank">https://assets.planet.com/docs/Fusion-Tech-Spec_v1.0.0.pdf</a></p>
+    </div>
+</li>
+
+<li><span class='project-name' onclick="toggleDetails('99-SATDATA-3.0-Droogte')">SATDATA 3.0</span>
+    <div id="details-99-SATDATA-3.0-Droogte" class="details">
+        <p><strong>Hoofduitvoerder:</strong> Het Waterschapshuis</p>
+        <p><strong>Samenvatting:</strong> SATDATA 3.0 geeft waterschappen inzicht in de werkelijke verdamping en het verdampingstekort. Het maakt gebruik van microgolf satellietbeelden om dagelijkse verdamping en bodemvocht te bepalen, zelfs onder bewolkte omstandigheden.</p>
+        <p><strong>Bereik:</strong> Nederland</p>
+        <p><strong>Financieringsbron:</strong> Eigen financiering, STOWA, Rijksoverheid</p>
+        <p><strong>Organisatietype:</strong> Overheid</p>
+        <p><strong>Samenwerkingspartners:</strong> Planet, Universiteit Gent, VanderSat (nu onderdeel van Planet)</p>
+        <p><strong>Gebruiker:</strong> Waterschappen, beleidsmakers, landbouwsector</p>
+        <p><strong>Website:</strong> <a href="https://www.hetwaterschapshuis.nl/verdamping-satdata-30" target="_blank">https://www.hetwaterschapshuis.nl/verdamping-satdata-30</a></p>
+    </div>
+</li>
+
+<li><span class='project-name' onclick="toggleDetails('100-SWIMM-–-Soil-Water-evaluation-system-based-on-Integrated-Measurements-and-Modelling-Droogte')">SWIMM – Soil Water evaluation system based on Integrated Measurements and Modelling</span>
+    <div id="details-100-SWIMM-–-Soil-Water-evaluation-system-based-on-Integrated-Measurements-and-Modelling-Droogte" class="details">
+        <p><strong>Hoofduitvoerder:</strong> KnowH2O</p>
+        <p><strong>Samenvatting:</strong> Het project richt zich op het ontwikkelen en testen van een instrument dat de hydrologische en verdrogings-toestand van een gebied integraal kan analyseren. Door een integratie van veldwaarnemingen, remote sensing, simulatiemodellen en lokale kennis kan de waterhuishouding van een gebied bepaald worden en kunnen discrepanties met de optimale situatie vastgesteld worden.</p>
+        <p><strong>Bereik:</strong> Nederland</p>
+        <p><strong>Financieringsbron:</strong> Provincie Noord-Brabant, Stichting Klimaat voor Ruimte, Valorius-programma</p>
+        <p><strong>Organisatietype:</strong> Bedrijf</p>
+        <p><strong>Samenwerkingspartners:</strong> KWR Watercycle Research Institute, FutureWater, Hoefsloot Spatial Solutions</p>
+        <p><strong>Gebruiker:</strong> Waterbeheerders, agrariërs, natuurbeheerders</p>
+        <p><strong>Website:</strong> <a href="https://www.knowh2o.nl/projecten/soil-water-evaluation-system-based-on-integrated-measurements-and-modelling-swimm/" target="_blank">https://www.knowh2o.nl/projecten/soil-water-evaluation-system-based-on-integrated-measurements-and-modelling-swimm/</a></p>
+    </div>
+</li>
+
+<li><span class='project-name' onclick="toggleDetails('102-Sat4Flood-Droogte')">Sat4Flood</span>
+    <div id="details-102-Sat4Flood-Droogte" class="details">
+        <p><strong>Hoofduitvoerder:</strong> Miramap</p>
+        <p><strong>Samenvatting:</strong> Sat4Flood visualiseert wereldwijd de risico's van dijkfalen op basis van de meest recente satellietgegevens. Het combineert hoge-resolutie bodemvochtdata met InSAR-deformatiedata en andere aardobservatiegegevens om overstromingsrisico's te identificeren en te visualiseren.</p>
+        <p><strong>Bereik:</strong> Mondiaal</p>
+        <p><strong>Financieringsbron:</strong> ESA InCubed programma</p>
+        <p><strong>Organisatietype:</strong> Bedrijf</p>
+        <p><strong>Samenwerkingspartners:</strong> SkyGeo, 52Impact</p>
+        <p><strong>Gebruiker:</strong> Waterautoriteiten, gemeenten, steden en regio's, crisismanagement/ hulporganisaties, verzekeringsmaatschappijen, vastgoedontwikkeling, mijnbouwbedrijven, internationale organisaties (VN, Wereldbank), internationale ingenieursbureaus</p>
+        <p><strong>Website:</strong> <a href="https://incubed.esa.int/portfolio/sat4flood/" target="_blank">https://incubed.esa.int/portfolio/sat4flood/</a></p>
+    </div>
+</li>
+
+<li><span class='project-name' onclick="toggleDetails('103-SatWater-Droogte')">SatWater</span>
+    <div id="details-103-SatWater-Droogte" class="details">
+        <p><strong>Hoofduitvoerder:</strong> STOWA</p>
+        <p><strong>Samenvatting:</strong> SatWater richt zich op het verbeteren van de kwaliteit van dagelijks beschikbare verdampingsinformatie, zelfs onder bewolkte omstandigheden. Het project maakt gebruik van satellietdata om actuele en voorspellende verdampingsinformatie en bodemvochtprofielen te leveren voor waterbeheer.</p>
+        <p><strong>Bereik:</strong> Nederland</p>
+        <p><strong>Financieringsbron:</strong> SBIR door NSO</p>
+        <p><strong>Organisatietype:</strong> Overheid</p>
+        <p><strong>Samenwerkingspartners:</strong> ESA, NSO, waterschappen</p>
+        <p><strong>Gebruiker:</strong> Waterschappen, Ministerie van Economische Zaken en Klimaat, Ministerie van Onderwijs, Cultuur en Wetenschap, Ministerie van Infrastructuur en Waterstaat, NWO</p>
+        <p><strong>Website:</strong> <a href="https://www.stowa.nl/sat-water" target="_blank">https://www.stowa.nl/sat-water</a></p>
+    </div>
+</li>
+
+<li><span class='project-name' onclick="toggleDetails('107-Satellietdataportaal-Droogte')">Satellietdataportaal</span>
+    <div id="details-107-Satellietdataportaal-Droogte" class="details">
+        <p><strong>Hoofduitvoerder:</strong> NSO</p>
+        <p><strong>Samenvatting:</strong> Het Satellietdataportaal biedt kosteloos toegang tot hoge resolutie satellietbeelden voor bedrijven, personen en instanties in Nederland. Het portaal biedt zowel voorbewerkte als ruwe satellietdata die kunnen worden gebruikt in GIS-toepassingen en voor verschillende monitoringdoeleinden.</p>
+        <p><strong>Bereik:</strong> Nederland</p>
+        <p><strong>Financieringsbron:</strong> Eigen financiering</p>
+        <p><strong>Organisatietype:</strong> Overheid</p>
+        <p><strong>Samenwerkingspartners:</strong> -</p>
+        <p><strong>Gebruiker:</strong> Bedrijven, particulieren, instanties in Nederland</p>
+        <p><strong>Website:</strong> <a href="satellietdataportaal.nl" target="_blank">satellietdataportaal.nl</a></p>
+    </div>
+</li>
+
+<li><span class='project-name' onclick="toggleDetails('108-Sentinels-for-Evapotranspiration-(Sen-ET)-Droogte')">Sentinels for Evapotranspiration (Sen-ET)</span>
+    <div id="details-108-Sentinels-for-Evapotranspiration-(Sen-ET)-Droogte" class="details">
+        <p><strong>Hoofduitvoerder:</strong> DHI GRAS</p>
+        <p><strong>Samenvatting:</strong> Het Sen-ET project richt zich op het ontwikkelen van een optimale methode voor het schatten van evapotranspiratie op zowel fijne als grove ruimtelijke schalen. Dit wordt bereikt door gebruik te maken van de synergistische observaties van Sentinel-2 en Sentinel-3 satellieten. Het einddoel is een open-source softwaretool te creëren voor het verbeteren van irrigatiebeheer.</p>
+        <p><strong>Bereik:</strong> Mondiaal</p>
+        <p><strong>Financieringsbron:</strong> ESA</p>
+        <p><strong>Organisatietype:</strong> Bedrijf</p>
+        <p><strong>Samenwerkingspartners:</strong> Institut de Recerca i Tecnologia Agroalimentàries (IRTA), Consiglio Nazionale delle Ricerche (CNR)</p>
+        <p><strong>Gebruiker:</strong> Beleidsmakers, waterbeheerders, landbouwsector, klimaatonderzoekers</p>
+        <p><strong>Website:</strong> <a href="http://www.esa-sen4et.org/" target="_blank">http://www.esa-sen4et.org/</a></p>
+    </div>
+</li>
+
+<li><span class='project-name' onclick="toggleDetails('110-Soil-Moisture-Monitoring-Droogte')">Soil Moisture Monitoring</span>
+    <div id="details-110-Soil-Moisture-Monitoring-Droogte" class="details">
+        <p><strong>Hoofduitvoerder:</strong> VanderSat (nu deel van Planet)</p>
+        <p><strong>Samenvatting:</strong> Dit project monitort de bodemvochtigheid met behulp van satellietmicrowavemetingen tussen 1,4 GHz en 36,5 GHz. De gegevens worden dagelijks bijgewerkt en bieden een gedetailleerd beeld van de vochtigheid in de bodem, essentieel voor landbouw, waterbeheer en droogtepreventie.</p>
+        <p><strong>Bereik:</strong> Mondiaal</p>
+        <p><strong>Financieringsbron:</strong> Eigen financiering</p>
+        <p><strong>Organisatietype:</strong> Bedrijf</p>
+        <p><strong>Samenwerkingspartners:</strong> -</p>
+        <p><strong>Gebruiker:</strong> Landbouwers, Waterbeheerders, Milieuonderzoekers</p>
+        <p><strong>Website:</strong> <a href="docs.vandersat.com" target="_blank">docs.vandersat.com</a></p>
+    </div>
+</li>
+
+<li><span class='project-name' onclick="toggleDetails('115-Thirsty-Droogte')">Thirsty</span>
+    <div id="details-115-Thirsty-Droogte" class="details">
+        <p><strong>Hoofduitvoerder:</strong> Hydrosat</p>
+        <p><strong>Samenvatting:</strong> Thirsty ontwikkelt twee toepassingen die de unieke mogelijkheden van satelliet-gebaseerde thermische gegevens benutten. Het project omvat een oogstprognose om toeleveringsketens te beheren en een irrigatiebeheerhulpmiddel om boeren inzicht te geven in de gezondheid van gewassen en wanneer ze moeten irrigeren.</p>
+        <p><strong>Bereik:</strong> Europa</p>
+        <p><strong>Financieringsbron:</strong> ESA Business Applications</p>
+        <p><strong>Organisatietype:</strong> Bedrijf</p>
+        <p><strong>Samenwerkingspartners:</strong> ESA</p>
+        <p><strong>Gebruiker:</strong> Agribusiness, voedselverwerkers, verpakkers, distributeurs, financiële bedrijven, boeren, ag-tech resellers</p>
+        <p><strong>Website:</strong> <a href="https://business.esa.int/projects/thirsty" target="_blank">https://business.esa.int/projects/thirsty</a></p>
+    </div>
+</li>
+
+<li><span class='project-name' onclick="toggleDetails('117-TopSoil-Droogte')">TopSoil</span>
+    <div id="details-117-TopSoil-Droogte" class="details">
+        <p><strong>Hoofduitvoerder:</strong> Region Midtjylland</p>
+        <p><strong>Samenvatting:</strong> TopSoil richt zich op de impact van klimaatverandering op bodem- en grondwatercondities. Het project onderzoekt en modelleert de bovenste 20-30 meter van de bodem om waterkwaliteit te verbeteren en overstromingen te verminderen. Het omvat diverse pilotprojecten in de Noordzeeregio.</p>
+        <p><strong>Bereik:</strong> Europa</p>
+        <p><strong>Financieringsbron:</strong> Europese Unie (Interreg VB North Sea Region)</p>
+        <p><strong>Organisatietype:</strong> Overheid</p>
+        <p><strong>Samenwerkingspartners:</strong> Vlaamse Milieumaatschappij, Herning Kommune, Provincie Drenthe, Leibniz-Institut fÃ¼r Angewandte Geophysik, The Rivers Trust, en anderen</p>
+        <p><strong>Gebruiker:</strong> Gemeentelijke waterbeheerders, Landbouwers, Milieuorganisaties</p>
+        <p><strong>Website:</strong> <a href="https://www.vmm.be/water/projecten/topsoil" target="_blank">https://www.vmm.be/water/projecten/topsoil</a></p>
+    </div>
+</li>
+
+<li><span class='project-name' onclick="toggleDetails('125-WUNDER-Droogte')">WUNDER</span>
+    <div id="details-125-WUNDER-Droogte" class="details">
+        <p><strong>Hoofduitvoerder:</strong> Universiteit Twente</p>
+        <p><strong>Samenvatting:</strong> Het WUNDER-project richt zich op het begrijpen en optimaliseren van watergebruik tijdens droogtes in Nederland. Door gebruik te maken van geavanceerde satellietdata en samenwerking met verschillende partners, streeft het project naar innovatieve oplossingen voor waterbeheer en landbouwpraktijken onder droogtecondities.</p>
+        <p><strong>Bereik:</strong> Nederland</p>
+        <p><strong>Financieringsbron:</strong> KIC-Subsidie NOW, Deltares, Wageningen Environmental Research, Planet en HKV</p>
+        <p><strong>Organisatietype:</strong> Universiteit</p>
+        <p><strong>Samenwerkingspartners:</strong> Waterschapshuis/STOWA (Hoogheemraadschap de Stichtse Rijnlanden), Rijkswaterstaat (RWS), WVL -Water, Verkeer en Leefomgeving (WVL), Royal Netherlands Meteorological Institute (KNMI), Stichting Voedselbosbouw Nederland (VBNL-Voedselbos Ketelbroek, Voedselbos Schijndel), LTO Noord, DeltaplanAgrarischWaterbeheer (DAW), Zoetwaterwatervoorziening Oost-Nederland (ZON), Sencrop, Veenink Akkerbouw, Waterschap Aa en Maas (AenM), Waterschap Vallei en Veluwe (VenV), Herenboeren Wenumseveld</p>
+        <p><strong>Gebruiker:</strong> Waterschappen, Landbouwers, Waterbeheerders, Beleidsmakers</p>
+        <p><strong>Website:</strong> <a href="https://www.itc.nl/news/2022/3/479520/nwo-kic-grant-to-ut-research-on-water-use-during-droughts#more-information" target="_blank">https://www.itc.nl/news/2022/3/479520/nwo-kic-grant-to-ut-research-on-water-use-during-droughts#more-information</a></p>
+    </div>
+</li>
+
+<li><span class='project-name' onclick="toggleDetails('127-Water-Availability-Monitor-(WAM)-Droogte')">Water Availability Monitor (WAM)</span>
+    <div id="details-127-Water-Availability-Monitor-(WAM)-Droogte" class="details">
+        <p><strong>Hoofduitvoerder:</strong> Nelen & Schuurmans</p>
+        <p><strong>Samenvatting:</strong> WAM is een informatiedienst die dagelijkse irrigatieadviezen geeft aan boeren op perceelniveau. Het combineert geavanceerde hydrologische modellen met hoge-resolutie satellietbeelden en geodata om nauwkeurige en kostenefficiënte adviezen te geven.</p>
+        <p><strong>Bereik:</strong> Europa</p>
+        <p><strong>Financieringsbron:</strong> ESA InCubed programma</p>
+        <p><strong>Organisatietype:</strong> Bedrijf</p>
+        <p><strong>Samenwerkingspartners:</strong> AgroVision, VanderSat (nu deel van Planet)</p>
+        <p><strong>Gebruiker:</strong> Boeren, agrarische bedrijven, beleidsmakers</p>
+        <p><strong>Website:</strong> <a href="https://incubed.esa.int/portfolio/wam/" target="_blank">https://incubed.esa.int/portfolio/wam/</a></p>
+    </div>
+</li>
+
+<li><span class='project-name' onclick="toggleDetails('128-Water-Productivity-Improvement-in-Practice-(WaterPIP)-Droogte')">Water Productivity Improvement in Practice (WaterPIP)</span>
+    <div id="details-128-Water-Productivity-Improvement-in-Practice-(WaterPIP)-Droogte" class="details">
+        <p><strong>Hoofduitvoerder:</strong> IHE Delft</p>
+        <p><strong>Samenvatting:</strong> WaterPIP richt zich op het verbeteren van waterproductiviteit in de landbouw door middel van wetenschappelijk onderzoek, technologische ontwikkelingen en kennisuitwisseling. Het project helpt kleine boeren om hun landbouwopbrengsten te verhogen door gebruik te maken van digitale observatoria die veld- en remote sensing technieken combineren om gewasland en watergebruik te monitoren.</p>
+        <p><strong>Bereik:</strong> Mondiaal</p>
+        <p><strong>Financieringsbron:</strong> DGIS, Ministerie van Buitenlandse Zaken van Nederland</p>
+        <p><strong>Organisatietype:</strong> Instituut</p>
+        <p><strong>Samenwerkingspartners:</strong> FAO, Wageningen University & Research, MetaMeta, RAIN Foundation, IRC, Acacia Water, Hydrologic, Water Authority of Jordan, National Irrigation Administration of the Philippines, Galana Kulalu Irrigation Scheme</p>
+        <p><strong>Gebruiker:</strong> Kleine boeren, landbouwers, beleidsmakers, waterbeheerders</p>
+        <p><strong>Website:</strong> <a href="waterpip.un-ihe.org" target="_blank">waterpip.un-ihe.org</a></p>
+    </div>
+</li>
+</ul></div>
+<div id='waterkwaliteit-projects' class='hidden'><ul>
+<li><span class='project-name' onclick="toggleDetails('2-AI-ogen-op-het-water-Waterkwaliteit')">AI-ogen op het water</span>
+    <div id="details-2-AI-ogen-op-het-water-Waterkwaliteit" class="details">
+        <p><strong>Hoofduitvoerder:</strong> WaterInsight</p>
+        <p><strong>Samenvatting:</strong> Het project gebruikt satellietgegevens om hotspots te identificeren waar plastics en biomassa zich ophopen in binnenwateren, en combineert dit met in-situ gegevens om afvalstromen beter te begrijpen.</p>
+        <p><strong>Bereik:</strong> Nederland</p>
+        <p><strong>Financieringsbron:</strong> ESA-BIC Noordwijk</p>
+        <p><strong>Organisatietype:</strong> Bedrijf</p>
+        <p><strong>Samenwerkingspartners:</strong> Reef Support, RanMarine, Gemeente Rotterdam,  Leiden Universiteit</p>
+        <p><strong>Gebruiker:</strong> Universiteiten, milieuorganisaties, waterbeheerders</p>
+        <p><strong>Website:</strong> <a href="waterinsight.nl" target="_blank">waterinsight.nl</a></p>
+    </div>
+</li>
+
+<li><span class='project-name' onclick="toggleDetails('4-AMMON:-Autonomous-Monitoring-for-Multi-use-On-the-North-Sea-Waterkwaliteit')">AMMON: Autonomous Monitoring for Multi-use On the North Sea</span>
+    <div id="details-4-AMMON:-Autonomous-Monitoring-for-Multi-use-On-the-North-Sea-Waterkwaliteit" class="details">
+        <p><strong>Hoofduitvoerder:</strong> Water Insight</p>
+        <p><strong>Samenvatting:</strong> AMMON ontwikkelt een revolutionaire monitoringsdienst voor multifunctioneel gebruik van de Noordzee, gericht op het verminderen van vaartuigbewegingen, kosten en emissies. Het project ondersteunt offshore zeewierteelt en zonne-energie met behulp van drones, boeien en satellietbeelden.</p>
+        <p><strong>Bereik:</strong> Nederland</p>
+        <p><strong>Financieringsbron:</strong> Kansen voor West</p>
+        <p><strong>Organisatietype:</strong> Bedrijf</p>
+        <p><strong>Samenwerkingspartners:</strong> North Sea Farmers, Lobster Robotics, Aqitec, Oceans of Energy, Agora Solutions</p>
+        <p><strong>Gebruiker:</strong> Overheden, windparkeigenaren, kwekers, Rijkswaterstaat</p>
+        <p><strong>Website:</strong> <a href="https://www.waterinsight.nl/projects/innovative-ammon-project-for-sustainable-use-of-the-north-sea" target="_blank">https://www.waterinsight.nl/projects/innovative-ammon-project-for-sustainable-use-of-the-north-sea</a></p>
+    </div>
+</li>
+
+<li><span class='project-name' onclick="toggleDetails('5-AQUA-USERS-Waterkwaliteit')">AQUA-USERS</span>
+    <div id="details-5-AQUA-USERS-Waterkwaliteit" class="details">
+        <p><strong>Hoofduitvoerder:</strong> WaterInsight</p>
+        <p><strong>Samenvatting:</strong> AQUA-USERS voorziet de aquacultuurindustrie van relevante en tijdige informatie op basis van de meest actuele satellietdata en innovatieve optische in-situ metingen.</p>
+        <p><strong>Bereik:</strong> Europa</p>
+        <p><strong>Financieringsbron:</strong> European Community’s 7th Framework Program</p>
+        <p><strong>Organisatietype:</strong> Bedrijf</p>
+        <p><strong>Samenwerkingspartners:</strong> -</p>
+        <p><strong>Gebruiker:</strong> Universiteiten, bedrijven in de aquacultuursector</p>
+        <p><strong>Website:</strong> <a href="waterinsight.nl" target="_blank">waterinsight.nl</a></p>
+    </div>
+</li>
+
+<li><span class='project-name' onclick="toggleDetails('13-CYANOBLOOM-Waterkwaliteit')">CYANOBLOOM</span>
+    <div id="details-13-CYANOBLOOM-Waterkwaliteit" class="details">
+        <p><strong>Hoofduitvoerder:</strong> ANBIOTEK</p>
+        <p><strong>Samenvatting:</strong> CYANOBLOOM is een geavanceerd risicomanagementinstrument voor de vroege detectie en identificatie van toxische algenbloei, dat helpt bij het voorkomen van gezondheidsrisico's en milieuschade.</p>
+        <p><strong>Bereik:</strong> Europa</p>
+        <p><strong>Financieringsbron:</strong> Europese Unie LIFE Programme</p>
+        <p><strong>Organisatietype:</strong> Bedrijf</p>
+        <p><strong>Samenwerkingspartners:</strong> WaterInsight, SISTEMAS GENOMICOS, BROCKMANN CONSULT, BROCKMANN GEOMATICS, ACLIMA</p>
+        <p><strong>Gebruiker:</strong> Universiteiten, milieuagentschappen</p>
+        <p><strong>Website:</strong> <a href="https://www.anbiotek.com/project/cyanobloom/" target="_blank">https://www.anbiotek.com/project/cyanobloom/</a></p>
+    </div>
+</li>
+
+<li><span class='project-name' onclick="toggleDetails('14-Citclops-Waterkwaliteit')">Citclops</span>
+    <div id="details-14-Citclops-Waterkwaliteit" class="details">
+        <p><strong>Hoofduitvoerder:</strong> Cetaqua, el Centro Tecnológico del Agua</p>
+        <p><strong>Samenvatting:</strong> Citclops ontwikkelt systemen voor het verzamelen en gebruiken van gegevens over de kleur, transparantie en fluorescerende eigenschappen van zeewater. Dit gebeurt met behulp van laagdrempelige sensoren en gegevens die door burgers worden verzameld, gecombineerd met gecontextualiseerde informatie en een internetplatform.</p>
+        <p><strong>Bereik:</strong> Europa</p>
+        <p><strong>Financieringsbron:</strong> EC-FP7</p>
+        <p><strong>Organisatietype:</strong> Organisatie</p>
+        <p><strong>Samenwerkingspartners:</strong> Barcelona Digital Technology Centre, CSIC, University of Oldenburg, NIOZ, Kinetical, TriOS Mess- und Datentechnik GmbH, MARIS BV, Noveltis, Coastwatch Europe, Vrije Universiteit Amsterdam, Deltares</p>
+        <p><strong>Gebruiker:</strong> Beleidsmakers, aquacultuur- en schelpdierindustrie, burgers, educatoren, en onderzoekers.</p>
+        <p><strong>Website:</strong> <a href="http://www.citclops.eu" target="_blank">http://www.citclops.eu</a></p>
+    </div>
+</li>
+
+<li><span class='project-name' onclick="toggleDetails('16-Climate-Change-Initiative-Lakes--Waterkwaliteit')">Climate Change Initiative Lakes </span>
+    <div id="details-16-Climate-Change-Initiative-Lakes--Waterkwaliteit" class="details">
+        <p><strong>Hoofduitvoerder:</strong> ESA</p>
+        <p><strong>Samenvatting:</strong> Het Lakes Climate Change Initiative (Lakes_cci) project richt zich op het ontwikkelen van lange termijn datasets van essentiële klimaatvariabelen (ECV's) afgeleid van satellietgegevens. Het project omvat metingen van onder andere waterniveau, wateroppervlak, watertemperatuur, ijsbedekking en waterreflectie, om inzicht te geven in de impact van klimaatverandering op meren wereldwijd.</p>
+        <p><strong>Bereik:</strong> Mondiaal</p>
+        <p><strong>Financieringsbron:</strong> ESA</p>
+        <p><strong>Organisatietype:</strong> Organisatie</p>
+        <p><strong>Samenwerkingspartners:</strong> Plymouth Marine Laboratory, National Oceanography Centre, Brockmann Consult, Natural Environment Research Council, University of Stirling, Finnish Environment Institute</p>
+        <p><strong>Gebruiker:</strong> Beleidsmakers, hydrologen, ecologen, milieuonderzoekers</p>
+        <p><strong>Website:</strong> <a href="https://climate.esa.int/en/projects/lakes/" target="_blank">https://climate.esa.int/en/projects/lakes/</a></p>
+    </div>
+</li>
+
+<li><span class='project-name' onclick="toggleDetails('17-Climate-Change-Initiative-Ocean-Colour-Waterkwaliteit')">Climate Change Initiative Ocean Colour</span>
+    <div id="details-17-Climate-Change-Initiative-Ocean-Colour-Waterkwaliteit" class="details">
+        <p><strong>Hoofduitvoerder:</strong> ESA</p>
+        <p><strong>Samenvatting:</strong> Het Ocean Colour Climate Change Initiative (OC-CCI) project richt zich op het produceren van lange termijn multi-sensor tijdreeksen van satellietgegevens over oceaankleur. Deze gegevens worden gebruikt voor klimaatstudies en het monitoren van de impact van klimaatverandering op mariene ecosystemen.</p>
+        <p><strong>Bereik:</strong> Mondiaal</p>
+        <p><strong>Financieringsbron:</strong> ESA</p>
+        <p><strong>Organisatietype:</strong> Organisatie</p>
+        <p><strong>Samenwerkingspartners:</strong> Plymouth Marine Laboratory, NASA, HYGEOS, University of Lisbon, Brockmann Consult</p>
+        <p><strong>Gebruiker:</strong> Mariene biologen, klimaatwetenschappers, beleidsmakers</p>
+        <p><strong>Website:</strong> <a href="https://www.oceancolour.org" target="_blank">https://www.oceancolour.org</a></p>
+    </div>
+</li>
+
+<li><span class='project-name' onclick="toggleDetails('20-CoastObs-Waterkwaliteit')">CoastObs</span>
+    <div id="details-20-CoastObs-Waterkwaliteit" class="details">
+        <p><strong>Hoofduitvoerder:</strong> WaterInsight</p>
+        <p><strong>Samenvatting:</strong> CoastObs ontwikkelt een serviceplatform voor kustwatermonitoring met gevalideerde producten afgeleid van aardobservatie, waaronder monitoring van zeegras, macroalgen en schadelijke algen.</p>
+        <p><strong>Bereik:</strong> Europa</p>
+        <p><strong>Financieringsbron:</strong> Horizon 2020</p>
+        <p><strong>Organisatietype:</strong> Bedrijf</p>
+        <p><strong>Samenwerkingspartners:</strong> Brockmann Consult, HZG, CNR-ISMAR, Deltares, HZB, Noveltis, Consorci Costa Brava, MUSCLE, AquaTT</p>
+        <p><strong>Gebruiker:</strong> Overheden, mariene wetenschappers, duikers, visserij, offshore industrie</p>
+        <p><strong>Website:</strong> <a href="waterinsight.nl" target="_blank">waterinsight.nl</a></p>
+    </div>
+</li>
+
+<li><span class='project-name' onclick="toggleDetails('24-Copernicus-Marine-Environment-Monitoring-Service-(CMEMS)-Waterkwaliteit')">Copernicus Marine Environment Monitoring Service (CMEMS)</span>
+    <div id="details-24-Copernicus-Marine-Environment-Monitoring-Service-(CMEMS)-Waterkwaliteit" class="details">
+        <p><strong>Hoofduitvoerder:</strong> Mercator Ocean International</p>
+        <p><strong>Samenvatting:</strong> CMEMS biedt gratis, regelmatige en systematische autoritatieve informatie over de toestand van de oceanen wereldwijd en regionaal. Het ondersteunt EU-beleid en internationale juridische verplichtingen met betrekking tot oceaanbeheer.</p>
+        <p><strong>Bereik:</strong> Mondiaal</p>
+        <p><strong>Financieringsbron:</strong> Copernicus Programma</p>
+        <p><strong>Organisatietype:</strong> Instituut</p>
+        <p><strong>Samenwerkingspartners:</strong> Europese Commissie, Europese Ruimtevaartorganisatie (ESA), EUMETSAT, Europese lidstaten</p>
+        <p><strong>Gebruiker:</strong> Beleidsmakers, wetenschappers, bedrijven in de blauwe economie, NGO's, publieke instellingen, onderwijsinstellingen</p>
+        <p><strong>Website:</strong> <a href="https://marine.copernicus.eu/" target="_blank">https://marine.copernicus.eu/</a></p>
+    </div>
+</li>
+
+<li><span class='project-name' onclick="toggleDetails('38-ECOWATCH-Waterkwaliteit')">ECOWATCH</span>
+    <div id="details-38-ECOWATCH-Waterkwaliteit" class="details">
+        <p><strong>Hoofduitvoerder:</strong> Waterschap Noorderzijlvest</p>
+        <p><strong>Samenvatting:</strong> Het project ECOWATCH richt zich op het continu monitoren van algen, waaronder blauwalg, in het Paterswoldsemeer met behulp van een innovatieve algensensor. Deze sensor meet de concentratie van chlorofyl-a en fycocyanine om de waterkwaliteit te bewaken en snelle interventies mogelijk te maken.</p>
+        <p><strong>Bereik:</strong> Nederland</p>
+        <p><strong>Financieringsbron:</strong> Fryslan Fernijt IV, Ministerie van Economische Zaken, Samenwerkingsverband Noord Nederland, Provincie Fryslan</p>
+        <p><strong>Organisatietype:</strong> Overheid</p>
+        <p><strong>Samenwerkingspartners:</strong> BlueLeg Monitor, Water Insight, Incas3, Waterschap Noorderzijlvest</p>
+        <p><strong>Gebruiker:</strong> Waterbeheerders, beleidsmakers, zwemplassenbeheerders</p>
+        <p><strong>Website:</strong> <a href="https://www.noorderzijlvest.nl/blauwalg" target="_blank">https://www.noorderzijlvest.nl/blauwalg</a></p>
+    </div>
+</li>
+
+<li><span class='project-name' onclick="toggleDetails('39-EOMORES-Waterkwaliteit')">EOMORES</span>
+    <div id="details-39-EOMORES-Waterkwaliteit" class="details">
+        <p><strong>Hoofduitvoerder:</strong> EOMAP</p>
+        <p><strong>Samenvatting:</strong> EOMORES ontwikkelt nieuwe commerciële diensten voor operationele monitoring en rapportage van de ecologische status van binnen- en kustwateren.</p>
+        <p><strong>Bereik:</strong> Europa</p>
+        <p><strong>Financieringsbron:</strong> Horizon 2020</p>
+        <p><strong>Organisatietype:</strong> Organisatie</p>
+        <p><strong>Samenwerkingspartners:</strong> -</p>
+        <p><strong>Gebruiker:</strong> Universiteiten, waterschappen, milieuagentschappen</p>
+        <p><strong>Website:</strong> <a href="waterinsight.nl" target="_blank">waterinsight.nl</a></p>
+    </div>
+</li>
+
+<li><span class='project-name' onclick="toggleDetails('49-GLaSS-Waterkwaliteit')">GLaSS</span>
+    <div id="details-49-GLaSS-Waterkwaliteit" class="details">
+        <p><strong>Hoofduitvoerder:</strong> WaterInsight</p>
+        <p><strong>Samenvatting:</strong> GLaSS ontwikkelt innovatieve tools ter voorbereiding op het gebruik van de nieuwe Sentinel-2 en Sentinel-3 satellieten voor de monitoring van waterkwaliteit in meren en reservoirs.</p>
+        <p><strong>Bereik:</strong> Europa</p>
+        <p><strong>Financieringsbron:</strong> EC-FP7</p>
+        <p><strong>Organisatietype:</strong> Bedrijf</p>
+        <p><strong>Samenwerkingspartners:</strong> , Eomap, VU, Brockman Consult, Consiglia Nazionale Delle Ricerche, Tartu Observatory, Brockman Geomatics</p>
+        <p><strong>Gebruiker:</strong> Universiteiten, waterschappen, milieuagentschappen</p>
+        <p><strong>Website:</strong> <a href="https://www.eomap.com/" target="_blank">https://www.eomap.com/</a></p>
+    </div>
+</li>
+
+<li><span class='project-name' onclick="toggleDetails('56-HBOTE-Waterkwaliteit')">HBOTE</span>
+    <div id="details-56-HBOTE-Waterkwaliteit" class="details">
+        <p><strong>Hoofduitvoerder:</strong> WaterInsight</p>
+        <p><strong>Samenvatting:</strong> HBOTE richt zich op het opzetten van een operationele dienst voor waterkwaliteitsparameters op basis van aardobservatie in het Eems Dollart estuarium en het aangrenzende Waddengebied.</p>
+        <p><strong>Bereik:</strong> Nederland</p>
+        <p><strong>Financieringsbron:</strong> Rijkswaterstaat, NSO and RWO</p>
+        <p><strong>Organisatietype:</strong> Bedrijf</p>
+        <p><strong>Samenwerkingspartners:</strong> -</p>
+        <p><strong>Gebruiker:</strong> Universiteiten, Rijkswaterstaat, waterbeheerders</p>
+        <p><strong>Website:</strong> <a href="waterinsight.nl" target="_blank">waterinsight.nl</a></p>
+    </div>
+</li>
+
+<li><span class='project-name' onclick="toggleDetails('60-HydroNET-Waterkwaliteit')">HydroNET</span>
+    <div id="details-60-HydroNET-Waterkwaliteit" class="details">
+        <p><strong>Hoofduitvoerder:</strong> Hydrologic</p>
+        <p><strong>Samenvatting:</strong> HydroNET is een cloud-gebaseerd besluitvormingsondersteunend systeem dat waterbeheerders helpt om beter te anticiperen op extreme weersomstandigheden door datagestuurde waterbeheerbeslissingen mogelijk te maken. Het platform integreert gegevens uit verschillende bronnen, creëert waterintelligentie door middel van data science en modellering, en genereert dashboards, geautomatiseerde rapporten en persoonlijke waarschuwingen die zijn afgestemd op de behoeften van personeel en belanghebbenden.</p>
+        <p><strong>Bereik:</strong> Mondiaal</p>
+        <p><strong>Financieringsbron:</strong> Eigen financiering</p>
+        <p><strong>Organisatietype:</strong> Bedrijf</p>
+        <p><strong>Samenwerkingspartners:</strong> Arcadis US, Arcadis UK, HydroLogic</p>
+        <p><strong>Gebruiker:</strong> Waterbeheerders, overheidsinstanties, kennisinstituten, steden en gemeenten, nationale weersdiensten</p>
+        <p><strong>Website:</strong> <a href="https://www.hydronet.nl/" target="_blank">https://www.hydronet.nl/</a></p>
+    </div>
+</li>
+
+<li><span class='project-name' onclick="toggleDetails('64-Innovative-monitoring-of-water-quality-for-urban-water-systems-and-natural-waters-Waterkwaliteit')">Innovative monitoring of water quality for urban water systems and natural waters</span>
+    <div id="details-64-Innovative-monitoring-of-water-quality-for-urban-water-systems-and-natural-waters-Waterkwaliteit" class="details">
+        <p><strong>Hoofduitvoerder:</strong> KnowH2O</p>
+        <p><strong>Samenvatting:</strong> Het project onderzoekt de mogelijkheden en methoden om de waterkwaliteit van kleine zoetwaterlichamen te monitoren met behulp van remote sensing technieken. Een haalbaarheidsstudie evalueert de nauwkeurigheid en meerwaarde van deze nieuwe technologieën.</p>
+        <p><strong>Bereik:</strong> Nederland</p>
+        <p><strong>Financieringsbron:</strong> Hoogheemraadschap van Rijnland</p>
+        <p><strong>Organisatietype:</strong> Bedrijf</p>
+        <p><strong>Samenwerkingspartners:</strong> Water Insight, Waterschap Rivierenland, ACT-team 3 van CGI-Wageningen Universiteit</p>
+        <p><strong>Gebruiker:</strong> Waterbeheerders, beleidsmakers, wetenschappers</p>
+        <p><strong>Website:</strong> <a href="https://www.knowh2o.nl/projecten/innovative-monitoring-of-water-quality-for-urban-water-systems-and-natural-waters/" target="_blank">https://www.knowh2o.nl/projecten/innovative-monitoring-of-water-quality-for-urban-water-systems-and-natural-waters/</a></p>
+    </div>
+</li>
+
+<li><span class='project-name' onclick="toggleDetails('67-Kartering-van-oever--en-waterplanten-vanuit-de-lucht-Waterkwaliteit')">Kartering van oever- en waterplanten vanuit de lucht</span>
+    <div id="details-67-Kartering-van-oever--en-waterplanten-vanuit-de-lucht-Waterkwaliteit" class="details">
+        <p><strong>Hoofduitvoerder:</strong> KnowH2O</p>
+        <p><strong>Samenvatting:</strong> Het project richt zich op het karteren van oever- en waterplanten vanuit de lucht door middel van remote sensing technieken zoals multispectrale classificatie en objectherkenning. Dit gebeurt in Polder Stein om de effectiviteit en kostenbesparing ten opzichte van handmatige methoden te onderzoeken.</p>
+        <p><strong>Bereik:</strong> Nederland</p>
+        <p><strong>Financieringsbron:</strong> Hoogheemraadschap van Rijnland</p>
+        <p><strong>Organisatietype:</strong> Bedrijf</p>
+        <p><strong>Samenwerkingspartners:</strong> Deltares, StellaSpark, DRO Remote Sensing</p>
+        <p><strong>Gebruiker:</strong> Waterbeheerders, natuurbeheerders, ecologen</p>
+        <p><strong>Website:</strong> <a href="https://www.knowh2o.nl/projecten/kartering-van-oever-en-waterplanten-vanuit-de-lucht-aquatische-vegetatie-karteren-op-basis-van-airborne-remote-sensing-beelden-door-middel-van-multispectrale-classificatie-en-objectherkenning/" target="_blank">https://www.knowh2o.nl/projecten/kartering-van-oever-en-waterplanten-vanuit-de-lucht-aquatische-vegetatie-karteren-op-basis-van-airborne-remote-sensing-beelden-door-middel-van-multispectrale-classificatie-en-objectherkenning/</a></p>
+    </div>
+</li>
+
+<li><span class='project-name' onclick="toggleDetails('68-Keek-op-de-Beek-Waterkwaliteit')">Keek op de Beek</span>
+    <div id="details-68-Keek-op-de-Beek-Waterkwaliteit" class="details">
+        <p><strong>Hoofduitvoerder:</strong> WSP Nederland</p>
+        <p><strong>Samenvatting:</strong> Keek op de Beek richt zich op het verbeteren van de monitoring van de kwaliteit van Nederlandse wateren met behulp van moderne technieken zoals remote sensing en AI. Het project helpt waterbeheerders om beter inzicht te krijgen in de status van het watersysteem en gerichte maatregelen te treffen.</p>
+        <p><strong>Bereik:</strong> Nederland</p>
+        <p><strong>Financieringsbron:</strong> SBIR door NSO, RVO</p>
+        <p><strong>Organisatietype:</strong> Bedrijf</p>
+        <p><strong>Samenwerkingspartners:</strong> RVO, diverse waterbeheerders</p>
+        <p><strong>Gebruiker:</strong> Waterbeheerders, beleidsmakers, overheidsinstanties</p>
+        <p><strong>Website:</strong> <a href="https://www.rvo.nl/subsidies-financiering/sbir/abc/ai-beeldherkenning-en-remote-sensing/publieke-samenvattingen" target="_blank">https://www.rvo.nl/subsidies-financiering/sbir/abc/ai-beeldherkenning-en-remote-sensing/publieke-samenvattingen</a></p>
+    </div>
+</li>
+
+<li><span class='project-name' onclick="toggleDetails('71-Klimaateffectatlas-Waterkwaliteit')">Klimaateffectatlas</span>
+    <div id="details-71-Klimaateffectatlas-Waterkwaliteit" class="details">
+        <p><strong>Hoofduitvoerder:</strong> Stichting Climate Adaptation Services (CAS)</p>
+        <p><strong>Samenvatting:</strong> De Klimaateffectatlas biedt uitgebreide informatie over de gevolgen van klimaatverandering in Nederland. Het bevat kaarten en data over overstromingen, droogte, hitte, en wateroverlast om beleidsmakers en planners te helpen bij het nemen van adaptatiemaatregelen.</p>
+        <p><strong>Bereik:</strong> Nederland</p>
+        <p><strong>Financieringsbron:</strong> Ministerie van Infrastructuur en Waterstaat</p>
+        <p><strong>Organisatietype:</strong> Instituut</p>
+        <p><strong>Samenwerkingspartners:</strong> Deltares, KNMI, Wageningen University & Research, TNO, Rijkswaterstaat, PBL</p>
+        <p><strong>Gebruiker:</strong> Beleidsmakers, gemeenten, waterschappen, burgers</p>
+        <p><strong>Website:</strong> <a href="klimaateffectatlas.nl" target="_blank">klimaateffectatlas.nl</a></p>
+    </div>
+</li>
+
+<li><span class='project-name' onclick="toggleDetails('72-Kroosmonitorings-Waterkwaliteit')">Kroosmonitorings</span>
+    <div id="details-72-Kroosmonitorings-Waterkwaliteit" class="details">
+        <p><strong>Hoofduitvoerder:</strong> NEO</p>
+        <p><strong>Samenvatting:</strong> Het project richt zich op het monitoren van eendenkroos in waterwegen met behulp van satellietdata. Dit helpt om de locaties, hoeveelheid biomassa en de snelheid van toename in kaart te brengen. Dit geeft een gebiedsdekkend overzicht en helpt waterbeheerders bij het effectief beheren van de waterkwaliteit. De resultaten worden binnen 24 uur gevalideerd met veldmetingen.</p>
+        <p><strong>Bereik:</strong> Nederland</p>
+        <p><strong>Financieringsbron:</strong> Hoogheemraadschap De Stichtse Rijnlanden</p>
+        <p><strong>Organisatietype:</strong> Bedrijf</p>
+        <p><strong>Samenwerkingspartners:</strong> Hoogheemraadschap De Stichtse Rijnlanden</p>
+        <p><strong>Gebruiker:</strong> Hoogheemraadschap De Stichtse Rijnlanden, waterbeheerders</p>
+        <p><strong>Website:</strong> <a href="https://www.neo.nl/nieuws/satellietdata-voor-een-gezond-watersysteem-monitoring-bij-hoogheemraadschap-de-stichtse-rijnlanden/" target="_blank">https://www.neo.nl/nieuws/satellietdata-voor-een-gezond-watersysteem-monitoring-bij-hoogheemraadschap-de-stichtse-rijnlanden/</a></p>
+    </div>
+</li>
+
+<li><span class='project-name' onclick="toggleDetails('74-MONOCLE-Waterkwaliteit')">MONOCLE</span>
+    <div id="details-74-MONOCLE-Waterkwaliteit" class="details">
+        <p><strong>Hoofduitvoerder:</strong> Plymouth Marine Laboratory (PML)</p>
+        <p><strong>Samenvatting:</strong> MONOCLE ontwikkelt duurzame in-situ observatieoplossingen ter ondersteuning van de kalibratie en validatie van aardobservatiesensoren in binnen- en overgangswaters.</p>
+        <p><strong>Bereik:</strong> Europa</p>
+        <p><strong>Financieringsbron:</strong> Horizon 2020</p>
+        <p><strong>Organisatietype:</strong> Instituut</p>
+        <p><strong>Samenwerkingspartners:</strong> WaterInsight, Plymouth Marine Laboratory (PML), Water Insight, Brockmann Consult GmbH, CNR-ISMAR, Helmholtz-Zentrum Geesthacht (HZG), International Institute for Applied Systems Analysis (IIASA), Limnos Ltd, NIVA, The Provost, Fellows, Foundation Scholars & the other members of Board of the College of the Holy & Undivided Trinity of Queen Elizabeth near Dublin (TRINITY), University of Stirling (STIRLING)</p>
+        <p><strong>Gebruiker:</strong> Universiteiten, milieuagentschappen</p>
+        <p><strong>Website:</strong> <a href="https://monocle-h2020.eu/" target="_blank">https://monocle-h2020.eu/</a></p>
+    </div>
+</li>
+
+<li><span class='project-name' onclick="toggleDetails('75-MUI-SAT-Waterkwaliteit')">MUI-SAT</span>
+    <div id="details-75-MUI-SAT-Waterkwaliteit" class="details">
+        <p><strong>Hoofduitvoerder:</strong> WaterInsight</p>
+        <p><strong>Samenvatting:</strong> MUI-SAT maakt gebruik van AI en satellietbeelden voor de detectie van muistromingen, wat helpt bij de veiligheid van zwemmers en de kustbewaking.</p>
+        <p><strong>Bereik:</strong> Nederland</p>
+        <p><strong>Financieringsbron:</strong> RVO  </p>
+        <p><strong>Organisatietype:</strong> Bedrijf</p>
+        <p><strong>Samenwerkingspartners:</strong> METIP, DOTSPACE</p>
+        <p><strong>Gebruiker:</strong> Universiteiten, kustbewakers, zwemveiligheidsorganisaties</p>
+        <p><strong>Website:</strong> <a href="waterinsight.nl" target="_blank">waterinsight.nl</a></p>
+    </div>
+</li>
+
+<li><span class='project-name' onclick="toggleDetails('89-North-Sea-Offshore-Wind-Farms-Waterkwaliteit')">North Sea Offshore Wind Farms</span>
+    <div id="details-89-North-Sea-Offshore-Wind-Farms-Waterkwaliteit" class="details">
+        <p><strong>Hoofduitvoerder:</strong> NWO</p>
+        <p><strong>Samenvatting:</strong> Drie consortia onderzoeken de interactie tussen ecologie en de fysieke aspecten van windparken in de Nederlandse Noordzee. Het project richt zich op het verbeteren van de balans tussen verschillende functies zoals visserij, maritiem transport en offshore energieproductie.</p>
+        <p><strong>Bereik:</strong> Nederland</p>
+        <p><strong>Financieringsbron:</strong> NWO, Ministerie van EZK en LNV</p>
+        <p><strong>Organisatietype:</strong> Overheid</p>
+        <p><strong>Samenwerkingspartners:</strong> NIOZ, Universiteit Leiden, diverse andere kennisinstellingen en bedrijven</p>
+        <p><strong>Gebruiker:</strong> Visserij, Maritiem transport, Offshore energiebedrijven</p>
+        <p><strong>Website:</strong> <a href="https://www.nwo.nl/en/news/researchers-consortia-examine-north-sea-offshore-wind-farms" target="_blank">https://www.nwo.nl/en/news/researchers-consortia-examine-north-sea-offshore-wind-farms</a></p>
+    </div>
+</li>
+
+<li><span class='project-name' onclick="toggleDetails('94-Predictive-Analytics-Waterkwaliteit')">Predictive Analytics</span>
+    <div id="details-94-Predictive-Analytics-Waterkwaliteit" class="details">
+        <p><strong>Hoofduitvoerder:</strong> WaterInsight</p>
+        <p><strong>Samenvatting:</strong> Dit project ontwikkelt een digitaal voorspellingsmodel voor de mossel- en oestersector op basis van satellietinformatie, wat helpt bij teeltplanning en productievoorspelling.</p>
+        <p><strong>Bereik:</strong> Nederland</p>
+        <p><strong>Financieringsbron:</strong> Provincie Zeeland</p>
+        <p><strong>Organisatietype:</strong> Bedrijf</p>
+        <p><strong>Samenwerkingspartners:</strong> Roem van Yerseke, Water Insight, HZ University of Applied Sciences, en ondersteund door PO Mosselcultuur, North Sea Farmers en de Nederlandse Oestervereniging</p>
+        <p><strong>Gebruiker:</strong> Universiteiten, bedrijven in de mossel- en oestersector</p>
+        <p><strong>Website:</strong> <a href="waterinsight.nl" target="_blank">waterinsight.nl</a></p>
+    </div>
+</li>
+
+<li><span class='project-name' onclick="toggleDetails('95-Proef-met-drone-Waterkwaliteit')">Proef met drone</span>
+    <div id="details-95-Proef-met-drone-Waterkwaliteit" class="details">
+        <p><strong>Hoofduitvoerder:</strong> Waterschap Hunze en Aa's</p>
+        <p><strong>Samenvatting:</strong> Het waterschap Hunze en Aa's gaat experimenteren met de inzet van drones voor verschillende taken, waaronder inspecties van dijken en taluds, handhaving, calamiteiten, landmeetkundige werkzaamheden, opsporen van blauwalg en beverbeheer. De drone kan moeilijk bereikbare plekken bereiken en biedt hoge resolutie opnamen.</p>
+        <p><strong>Bereik:</strong> Nederland</p>
+        <p><strong>Financieringsbron:</strong> Eigen financiering</p>
+        <p><strong>Organisatietype:</strong> Overheid</p>
+        <p><strong>Samenwerkingspartners:</strong> -</p>
+        <p><strong>Gebruiker:</strong> Medewerkers van Hunze en Aa's, beleidsmakers, agrariërs, natuurbeheerders</p>
+        <p><strong>Website:</strong> <a href="hunzeenaas.nl" target="_blank">hunzeenaas.nl</a></p>
+    </div>
+</li>
+
+<li><span class='project-name' onclick="toggleDetails('97-Remote-Sensing-en-Waterkwaliteit-Waterkwaliteit')">Remote Sensing en Waterkwaliteit</span>
+    <div id="details-97-Remote-Sensing-en-Waterkwaliteit-Waterkwaliteit" class="details">
+        <p><strong>Hoofduitvoerder:</strong> KnowH2O</p>
+        <p><strong>Samenvatting:</strong> Het project 'Remote Sensing en Waterkwaliteit' richt zich op het gebruik van satellietbeelden en andere remote sensing technologieën voor het monitoren en verbeteren van waterkwaliteit.</p>
+        <p><strong>Bereik:</strong> Nederland</p>
+        <p><strong>Financieringsbron:</strong> Eigen financiering</p>
+        <p><strong>Organisatietype:</strong> Bedrijf</p>
+        <p><strong>Samenwerkingspartners:</strong> Water Insight, Wageningen University & Research</p>
+        <p><strong>Gebruiker:</strong> Waterbeheerders, natuurbeheerders, wetenschappers, beleidsmakers</p>
+        <p><strong>Website:</strong> <a href="https://www.knowh2o.nl/projecten/remote-sensing-en-waterkwaliteit/" target="_blank">https://www.knowh2o.nl/projecten/remote-sensing-en-waterkwaliteit/</a></p>
+    </div>
+</li>
+
+<li><span class='project-name' onclick="toggleDetails('98-Rijkswaterstaat-Waterkwaliteitsvariabelen-Waterkwaliteit')">Rijkswaterstaat Waterkwaliteitsvariabelen</span>
+    <div id="details-98-Rijkswaterstaat-Waterkwaliteitsvariabelen-Waterkwaliteit" class="details">
+        <p><strong>Hoofduitvoerder:</strong> Rijkswaterstaat</p>
+        <p><strong>Samenvatting:</strong> Het project richt zich op het gebruik van satellietdata om waterkwaliteitsvariabelen in het Eems-Dollard estuarium te monitoren. Het doel is om kostenefficiënt en gebiedsdekkende informatie te verkrijgen voor waterbeheer en de berekening van primaire productie.</p>
+        <p><strong>Bereik:</strong> Nederland</p>
+        <p><strong>Financieringsbron:</strong> SBIR door NSO</p>
+        <p><strong>Organisatietype:</strong> Overheid</p>
+        <p><strong>Samenwerkingspartners:</strong> WaterInsight</p>
+        <p><strong>Gebruiker:</strong> Rijkswaterstaat, Waterbeheerders, Milieuonderzoekers</p>
+        <p><strong>Website:</strong> <a href="https://www.spaceoffice.nl/files/SBIR/Rijkswaterstaat_waterkwaliteitsvariabelen.pdf" target="_blank">https://www.spaceoffice.nl/files/SBIR/Rijkswaterstaat_waterkwaliteitsvariabelen.pdf</a></p>
+    </div>
+</li>
+
+<li><span class='project-name' onclick="toggleDetails('105-Satellietdataportaal-Waterkwaliteit')">Satellietdataportaal</span>
+    <div id="details-105-Satellietdataportaal-Waterkwaliteit" class="details">
+        <p><strong>Hoofduitvoerder:</strong> NSO</p>
+        <p><strong>Samenvatting:</strong> Het Satellietdataportaal biedt kosteloos toegang tot hoge resolutie satellietbeelden voor bedrijven, personen en instanties in Nederland. Het portaal biedt zowel voorbewerkte als ruwe satellietdata die kunnen worden gebruikt in GIS-toepassingen en voor verschillende monitoringdoeleinden.</p>
+        <p><strong>Bereik:</strong> Nederland</p>
+        <p><strong>Financieringsbron:</strong> Eigen financiering</p>
+        <p><strong>Organisatietype:</strong> Overheid</p>
+        <p><strong>Samenwerkingspartners:</strong> -</p>
+        <p><strong>Gebruiker:</strong> Bedrijven, particulieren, instanties in Nederland</p>
+        <p><strong>Website:</strong> <a href="satellietdataportaal.nl" target="_blank">satellietdataportaal.nl</a></p>
+    </div>
+</li>
+
+<li><span class='project-name' onclick="toggleDetails('112-TAPAS-Waterkwaliteit')">TAPAS</span>
+    <div id="details-112-TAPAS-Waterkwaliteit" class="details">
+        <p><strong>Hoofduitvoerder:</strong> WaterInsight</p>
+        <p><strong>Samenvatting:</strong> TAPAS richt zich op het consolideren van de milieuduurzaamheid van Europese aquacultuur door het ontwikkelen van tools en benaderingen voor milieubeoordeling en planning.</p>
+        <p><strong>Bereik:</strong> Europa</p>
+        <p><strong>Financieringsbron:</strong> Horizon 2020</p>
+        <p><strong>Organisatietype:</strong> Bedrijf</p>
+        <p><strong>Samenwerkingspartners:</strong> -</p>
+        <p><strong>Gebruiker:</strong> Universiteiten, bedrijven in de aquacultuursector</p>
+        <p><strong>Website:</strong> <a href="waterinsight.nl" target="_blank">waterinsight.nl</a></p>
+    </div>
+</li>
+
+<li><span class='project-name' onclick="toggleDetails('113-TKI-Dotter-project:-slimmer-maaibeheer-heeft-de-toekomst-Waterkwaliteit')">TKI Dotter-project: slimmer maaibeheer heeft de toekomst</span>
+    <div id="details-113-TKI-Dotter-project:-slimmer-maaibeheer-heeft-de-toekomst-Waterkwaliteit" class="details">
+        <p><strong>Hoofduitvoerder:</strong> KnowH2O</p>
+        <p><strong>Samenvatting:</strong> Het project richt zich op het ontwikkelen van nieuwe technieken om via remote sensing biomassa van waterplanten en vegetatietypen vlakdekkend te karteren en te vertalen naar hydraulische eigenschappen. Dit helpt waterbeheerders om beter af te wegen waar, wanneer en welk type beheer nuttig en het meest effectief is, rekening houdend met zowel hydraulische als ecologische doelen. Dit wordt gerealiseerd door gebruik te maken van full-spectrum camera's op drones.</p>
+        <p><strong>Bereik:</strong> Nederland</p>
+        <p><strong>Financieringsbron:</strong> Topsector Water, TKI, Waterschap Rivierenland, Waterschap Aa en Maas</p>
+        <p><strong>Organisatietype:</strong> Bedrijf</p>
+        <p><strong>Samenwerkingspartners:</strong> Deltares, KICT en KICT REC (Korea), Universiteit Twente</p>
+        <p><strong>Gebruiker:</strong> Waterbeheerders, beleidsmakers, ecologen</p>
+        <p><strong>Website:</strong> <a href="https://www.knowh2o.nl/projecten/tki-dotter-project-slimmer-maaibeheer-heeft-de-toekomst/" target="_blank">https://www.knowh2o.nl/projecten/tki-dotter-project-slimmer-maaibeheer-heeft-de-toekomst/</a></p>
+    </div>
+</li>
+
+<li><span class='project-name' onclick="toggleDetails('114-TRACTIONS-Waterkwaliteit')">TRACTIONS</span>
+    <div id="details-114-TRACTIONS-Waterkwaliteit" class="details">
+        <p><strong>Hoofduitvoerder:</strong> WaterInsight</p>
+        <p><strong>Samenvatting:</strong> TRACTIONS voorziet in de behoefte aan transparantie-informatie voor bagger- en aquacultuurmarkten. Het maakt gebruik van continu lokaal gekalibreerde optische sensoren en zeer hoge resolutie beelden.</p>
+        <p><strong>Bereik:</strong> Europa</p>
+        <p><strong>Financieringsbron:</strong> Eigen financiering, ESA</p>
+        <p><strong>Organisatietype:</strong> Bedrijf</p>
+        <p><strong>Samenwerkingspartners:</strong> -</p>
+        <p><strong>Gebruiker:</strong> Rijkswaterstaat, universiteiten, bedrijven in de bagger- en aquacultuursector</p>
+        <p><strong>Website:</strong> <a href="waterinsight.nl" target="_blank">waterinsight.nl</a></p>
+    </div>
+</li>
+
+<li><span class='project-name' onclick="toggleDetails('118-VOLTA-Waterkwaliteit')">VOLTA</span>
+    <div id="details-118-VOLTA-Waterkwaliteit" class="details">
+        <p><strong>Hoofduitvoerder:</strong> HZ University of Applied Sciences</p>
+        <p><strong>Samenvatting:</strong> VOLTA onderzoekt de mogelijkheden voor voedselkweek op zee, met nadruk op laag trofische aquacultuur en de economische haalbaarheid ervan.</p>
+        <p><strong>Bereik:</strong> Nederland</p>
+        <p><strong>Financieringsbron:</strong> SIA</p>
+        <p><strong>Organisatietype:</strong> Bedrijf</p>
+        <p><strong>Samenwerkingspartners:</strong> WaterInsight, Van Hall Larenstein University of Applied Sciences, Scalda, ROC Friese Poort, Taskforce Schelpdieren, Rijksdienst voor Ondernemend Nederland, M. Padmos B.V., Mosselkweek Steketee-Philipse B.V., Navis Advies B.V., PO Mosselcultuur, Roem van Yerseke B.V., Vette Aquacultuur B.V.</p>
+        <p><strong>Gebruiker:</strong> Kwekers, beleidsmakers, overheidsinstanties, onderzoeksinstellingen</p>
+        <p><strong>Website:</strong> <a href="waterinsight.nl" target="_blank">waterinsight.nl</a></p>
+    </div>
+</li>
+
+<li><span class='project-name' onclick="toggleDetails('123-WISP-3-Waterkwaliteit')">WISP-3</span>
+    <div id="details-123-WISP-3-Waterkwaliteit" class="details">
+        <p><strong>Hoofduitvoerder:</strong> WaterInsight</p>
+        <p><strong>Samenvatting:</strong> De WISP-3 is een draagbaar apparaat voor veldmetingen van waterkwaliteit, dat parameters zoals chlorofyl en zwevend stof meet en de gegevens gebruikt voor kalibratie van satellietbeelden.</p>
+        <p><strong>Bereik:</strong> Mondiaal</p>
+        <p><strong>Financieringsbron:</strong> Eigen financiering</p>
+        <p><strong>Organisatietype:</strong> Bedrijf</p>
+        <p><strong>Samenwerkingspartners:</strong> -</p>
+        <p><strong>Gebruiker:</strong> Universiteiten, milieuagentschappen, waterbeheerders</p>
+        <p><strong>Website:</strong> <a href="waterinsight.nl" target="_blank">waterinsight.nl</a></p>
+    </div>
+</li>
+
+<li><span class='project-name' onclick="toggleDetails('124-WISPstation-Waterkwaliteit')">WISPstation</span>
+    <div id="details-124-WISPstation-Waterkwaliteit" class="details">
+        <p><strong>Hoofduitvoerder:</strong> WaterInsight</p>
+        <p><strong>Samenvatting:</strong> Het WISPstation is een autonoom meetstation dat optische waterkwaliteitsparameters meet zoals chlorofyl, zwevend stof en cyanobacteriën. Het systeem ondersteunt continue kalibratie en validatie van satellietgegevens.</p>
+        <p><strong>Bereik:</strong> Nederland</p>
+        <p><strong>Financieringsbron:</strong> Eigen financiering</p>
+        <p><strong>Organisatietype:</strong> Bedrijf</p>
+        <p><strong>Samenwerkingspartners:</strong> -</p>
+        <p><strong>Gebruiker:</strong> Waterschappen, milieuagentschappen, waterbeheerders</p>
+        <p><strong>Website:</strong> <a href="waterinsight.nl" target="_blank">waterinsight.nl</a></p>
+    </div>
+</li>
+
+<li><span class='project-name' onclick="toggleDetails('129-Water-scenarios-For-Copernicus-Exploitation-(Water-ForCE)-Waterkwaliteit')">Water scenarios For Copernicus Exploitation (Water-ForCE)</span>
+    <div id="details-129-Water-scenarios-For-Copernicus-Exploitation-(Water-ForCE)-Waterkwaliteit" class="details">
+        <p><strong>Hoofduitvoerder:</strong> University of Tartu</p>
+        <p><strong>Samenvatting:</strong> Water-ForCE ontwikkelt een Roadmap voor de toekomstige fase van Copernicus Inland Water Services, met input van ruimtevaart, onderzoek, beleid, industrie en de derde sector. Het project richt zich op de integratie van in situ en remote sensing observaties en het verbeteren van watergerelateerde diensten.</p>
+        <p><strong>Bereik:</strong> Europa</p>
+        <p><strong>Financieringsbron:</strong> Horizon 2020</p>
+        <p><strong>Organisatietype:</strong> Universiteit</p>
+        <p><strong>Samenwerkingspartners:</strong> University of Tartu, Stichting dotSPACE, isardSAT, Antea Belgium, Plymouth Marine Laboratory, Leibniz Institute of Freshwater Ecology and Inland Fisheries, GeoEcoMar, Institute of Communication and Computer Systems, University of Stirling, IHE Delft Institute for Water Education, Estonian University of Life Sciences, National Institute of Research and Development for Biological Sciences, Vrije Universiteit Brussel, 3edata, National Research Council - Institute for Electromagnetic Sensing of the Environment, VITO, University of Natural Resources and Life Sciences (Vienna), Centro de Investigacion Ecologica y Aplicaciones Forestales, Sinergise, Water Insight.</p>
+        <p><strong>Gebruiker:</strong> Beleidsmakers, Wetenschappers, Milieuorganisaties</p>
+        <p><strong>Website:</strong> <a href="https://waterforce.eu/" target="_blank">https://waterforce.eu/</a></p>
+    </div>
+</li>
+
+<li><span class='project-name' onclick="toggleDetails('132-Watertemperatuur-Waterkwaliteit')">Watertemperatuur</span>
+    <div id="details-132-Watertemperatuur-Waterkwaliteit" class="details">
+        <p><strong>Hoofduitvoerder:</strong> KNMI</p>
+        <p><strong>Samenvatting:</strong> Het KNMI produceert zeewatertemperatuurkaarten op basis van beelden van de Amerikaanse NOAA weersatellieten. Deze beelden geven een goed beeld van de temperatuurverdeling van het water aan de oppervlakte. Het KNMI maakt ook temperatuurverwachtingen voor rivieren met behulp van het ijsgroeimodel.</p>
+        <p><strong>Bereik:</strong> Nederland</p>
+        <p><strong>Financieringsbron:</strong> Eigen financiering</p>
+        <p><strong>Organisatietype:</strong> Overheid</p>
+        <p><strong>Samenwerkingspartners:</strong> NOAA</p>
+        <p><strong>Gebruiker:</strong> Waterbeheerders, beleidsmakers, mariene biologen, klimaatonderzoekers, milieuwetenschappers</p>
+        <p><strong>Website:</strong> <a href="https://www.knmi.nl/kennis-en-datacentrum/uitleg/watertemperatuur" target="_blank">https://www.knmi.nl/kennis-en-datacentrum/uitleg/watertemperatuur</a></p>
+    </div>
+</li>
+
+<li><span class='project-name' onclick="toggleDetails('133-Waterwacht-Waterkwaliteit')">Waterwacht</span>
+    <div id="details-133-Waterwacht-Waterkwaliteit" class="details">
+        <p><strong>Hoofduitvoerder:</strong> 52impact</p>
+        <p><strong>Samenvatting:</strong> monitoring van waterkwaliteitsparameters (chlorophyll-a, turbiditeit, CDOM, electrical conductivity). Hiervoor worden diverse modellen (neuraal netwerk, ensemblemodellen) getraind aan de hand van metingen uit het Waterkwaliteitsportaal en vanuit HDSR. In samenwerking met Deltares kijken we tevens naar het spatieel maken van de AlgenRadar (product Deltares) waarmee ruimtelijk over waterlichamen voorspellingen van de groei van blauwalg (tot 14 dagen vooruit) kunnen worden gemaakt.</p>
+        <p><strong>Bereik:</strong> Nederland</p>
+        <p><strong>Financieringsbron:</strong> SBIR door NSO</p>
+        <p><strong>Organisatietype:</strong> Bedrijf</p>
+        <p><strong>Samenwerkingspartners:</strong> Deltares en HDSR</p>
+        <p><strong>Gebruiker:</strong> Provincie Zeeland, waarschijnlijk nog andere provincies</p>
+        <p><strong>Website:</strong> <a href="https://www.52impact.nl/" target="_blank">https://www.52impact.nl/</a></p>
+    </div>
+</li>
+
+<li><span class='project-name' onclick="toggleDetails('135-e-shape-Waterkwaliteit')">e-shape</span>
+    <div id="details-135-e-shape-Waterkwaliteit" class="details">
+        <p><strong>Hoofduitvoerder:</strong> ARMINES</p>
+        <p><strong>Samenvatting:</strong> e-shape versterkt de voordelen van Earth Observation (EO) voor Europa door EuroGEO te ontwikkelen. Het project omvat 37 pilots die EO-oplossingen bieden voor duurzame ontwikkeling en het ondersteunen van beleid en besluitvorming.</p>
+        <p><strong>Bereik:</strong> Europa</p>
+        <p><strong>Financieringsbron:</strong> Horizon 2020</p>
+        <p><strong>Organisatietype:</strong> Organisatie</p>
+        <p><strong>Samenwerkingspartners:</strong> Group on Earth Observations (GEO), Copernicus, WaterInsight</p>
+        <p><strong>Gebruiker:</strong> Beleidsmakers, overheden, wetenschappers, landbouwsector, stedelijke planners, waterbeheerders</p>
+        <p><strong>Website:</strong> <a href="https://e-shape.eu/index.php" target="_blank">https://e-shape.eu/index.php</a></p>
+    </div>
+</li>
+</ul></div>
+<div id='wateroverlast-projects' class='hidden'><ul>
+<li><span class='project-name' onclick="toggleDetails('0-3D-Afstromingsmodel-Amersfoort-Wateroverlast')">3D Afstromingsmodel Amersfoort</span>
+    <div id="details-0-3D-Afstromingsmodel-Amersfoort-Wateroverlast" class="details">
+        <p><strong>Hoofduitvoerder:</strong> Hydrologic</p>
+        <p><strong>Samenvatting:</strong> Dit project combineert HydroLogic's CityFlood en NEO's BGT3D applicatie om een gedetailleerd 3D-model te creëren dat de effecten van hevige regenbuien berekent en toont in een realistische, drie-dimensionale omgeving. Dit helpt bij het communiceren van wateroverlastproblemen en het nemen van maatregelen.</p>
+        <p><strong>Bereik:</strong> Nederland</p>
+        <p><strong>Financieringsbron:</strong> Gemeente Amersfoort</p>
+        <p><strong>Organisatietype:</strong> Bedrijf</p>
+        <p><strong>Samenwerkingspartners:</strong> NEO</p>
+        <p><strong>Gebruiker:</strong> Gemeenten, waterbeheerders, beleidsmakers</p>
+        <p><strong>Website:</strong> <a href="https://www.hydrologic.nl/projecten/3d-afstromingsmodel-amersfoort/" target="_blank">https://www.hydrologic.nl/projecten/3d-afstromingsmodel-amersfoort/</a></p>
+    </div>
+</li>
+
+<li><span class='project-name' onclick="toggleDetails('1-AHN-Wateroverlast')">AHN</span>
+    <div id="details-1-AHN-Wateroverlast" class="details">
+        <p><strong>Hoofduitvoerder:</strong> Rijkswaterstaat</p>
+        <p><strong>Samenvatting:</strong> Het Actueel Hoogtebestand Nederland (AHN) biedt een gedetailleerde en nauwkeurige digitale hoogtekaart van Nederland. Het wordt gebruikt voor waterbeheer, ruimtelijke ordening, en infrastructuur.</p>
+        <p><strong>Bereik:</strong> Nederland</p>
+        <p><strong>Financieringsbron:</strong> Rijkswaterstaat, provincies en waterschappen</p>
+        <p><strong>Organisatietype:</strong> Overheid</p>
+        <p><strong>Samenwerkingspartners:</strong> Rijkswaterstaat, provincies en waterschappen</p>
+        <p><strong>Gebruiker:</strong> Waterschappen, provincies, gemeenten, bedrijven, archeologen, onderzoekers, Rijkswaterstaat</p>
+        <p><strong>Website:</strong> <a href="https://www.ahn.nl/" target="_blank">https://www.ahn.nl/</a></p>
+    </div>
+</li>
+
+<li><span class='project-name' onclick="toggleDetails('3-ALL-RISK-Analyzing-ecosystem-dynamics-&-optimizing-grazing-management-Wateroverlast')">ALL-RISK Analyzing ecosystem dynamics & optimizing grazing management</span>
+    <div id="details-3-ALL-RISK-Analyzing-ecosystem-dynamics-&-optimizing-grazing-management-Wateroverlast" class="details">
+        <p><strong>Hoofduitvoerder:</strong> NIOZ</p>
+        <p><strong>Samenvatting:</strong> Dit project maakt deel uit van het multidisciplinaire All-Risk programma en richt zich op de ecologie en biogeomorfologie van de Waddenzeekusten. Het doel is om onzekerheden te verminderen over de effecten van vooroeverbeheer op veiligheid en ecologische status.</p>
+        <p><strong>Bereik:</strong> Nederland</p>
+        <p><strong>Financieringsbron:</strong> STW (NWO)</p>
+        <p><strong>Organisatietype:</strong> Instituut</p>
+        <p><strong>Samenwerkingspartners:</strong> RUG</p>
+        <p><strong>Gebruiker:</strong> Waterbeheerders, ecologen, natuurbeheerders, beleidsmakers, ingenieurs, wetenschappers, Rijksuniversiteit Groningen (RUG)</p>
+        <p><strong>Website:</strong> <a href="https://www.nioz.nl/en/research/projects/4311-0" target="_blank">https://www.nioz.nl/en/research/projects/4311-0</a></p>
+    </div>
+</li>
+
+<li><span class='project-name' onclick="toggleDetails('7-Aqua-Monitor-Wateroverlast')">Aqua Monitor</span>
+    <div id="details-7-Aqua-Monitor-Wateroverlast" class="details">
+        <p><strong>Hoofduitvoerder:</strong> Deltares</p>
+        <p><strong>Samenvatting:</strong> De Aqua Monitor van Deltares toont veranderingen in oppervlaktewater op wereldwijde schaal gedurende de laatste 30 jaar. Het maakt gebruik van satellietdata en Google Earth Engine om land- en waterconversies in kaart te brengen en te visualiseren.</p>
+        <p><strong>Bereik:</strong> Mondiaal</p>
+        <p><strong>Financieringsbron:</strong> Eigen financiering</p>
+        <p><strong>Organisatietype:</strong> Instituut</p>
+        <p><strong>Samenwerkingspartners:</strong> -</p>
+        <p><strong>Gebruiker:</strong> Beleidsmakers, waterbeheerders, NGO's, burgers</p>
+        <p><strong>Website:</strong> <a href="https://aqua-monitor.appspot.com" target="_blank">https://aqua-monitor.appspot.com</a></p>
+    </div>
+</li>
+
+<li><span class='project-name' onclick="toggleDetails('8-Automatische-detectie-van-wellen-Wateroverlast')">Automatische detectie van wellen</span>
+    <div id="details-8-Automatische-detectie-van-wellen-Wateroverlast" class="details">
+        <p><strong>Hoofduitvoerder:</strong> HKV</p>
+        <p><strong>Samenvatting:</strong> In samenwerking met Rijkswaterstaat ontwikkelt HKV een geautomatiseerde methode voor de detectie van wellen in waterkeringen. Door gebruik te maken van dronebeelden en een combinatie van infrarood- en RGB-camera's, wordt een heatmap gegenereerd die mogelijke locaties van wellen aangeeft. Dit helpt bij de inspectie en monitoring van dijken om zwakke plekken te identificeren en te beheren.</p>
+        <p><strong>Bereik:</strong> Nederland</p>
+        <p><strong>Financieringsbron:</strong> Eigen financiering, Rijkswaterstaat</p>
+        <p><strong>Organisatietype:</strong> Bedrijf</p>
+        <p><strong>Samenwerkingspartners:</strong> Rijkswaterstaat</p>
+        <p><strong>Gebruiker:</strong> Waterbeheerders, beleidsmakers, dijkinspecteurs</p>
+        <p><strong>Website:</strong> <a href="https://www.hkv.nl/actueel/automatische-detectie-van-wellen/" target="_blank">https://www.hkv.nl/actueel/automatische-detectie-van-wellen/</a></p>
+    </div>
+</li>
+
+<li><span class='project-name' onclick="toggleDetails('9-BasinMeter-Wateroverlast')">BasinMeter</span>
+    <div id="details-9-BasinMeter-Wateroverlast" class="details">
+        <p><strong>Hoofduitvoerder:</strong> eLEAF</p>
+        <p><strong>Samenvatting:</strong> BasinMeter combineert schaalbare aardobservatietechnologie met lokale datasets om de kwetsbaarheid van stroomgebieden en de impact op landbouwproductie en WASH (Water, Sanitation, and Hygiene) bloot te leggen. Het project ondersteunt strategische besluitvorming en lokale interventies om waterstress te mitigeren.</p>
+        <p><strong>Bereik:</strong> Mondiaal</p>
+        <p><strong>Financieringsbron:</strong> ESA Business Applications, CEO Water Mandate's Water Resilience Coalition</p>
+        <p><strong>Organisatietype:</strong> Bedrijf</p>
+        <p><strong>Samenwerkingspartners:</strong> 52impact, CEO Water Mandate, Water Resilience Coalition,</p>
+        <p><strong>Gebruiker:</strong> Beleidsmakers, waterbeheerders, landbouwsector, gemeenschappen</p>
+        <p><strong>Website:</strong> <a href="https://eleaf.com/basinmeter-unbiased-methodology-for-measuring-npwi-water-indicators/" target="_blank">https://eleaf.com/basinmeter-unbiased-methodology-for-measuring-npwi-water-indicators/</a></p>
+    </div>
+</li>
+
+<li><span class='project-name' onclick="toggleDetails('10-Beregeningsmonitor-Wateroverlast')">Beregeningsmonitor</span>
+    <div id="details-10-Beregeningsmonitor-Wateroverlast" class="details">
+        <p><strong>Hoofduitvoerder:</strong> eLEAF</p>
+        <p><strong>Samenvatting:</strong> De Beregeningsmonitor helpt waterschappen bij het monitoren van beregeningsmaatregelen door verschillende data te integreren en inzicht te geven in waar en wanneer beregening plaatsvindt. Dit ondersteunt een duurzame en eerlijke verdeling van watervoorraden en helpt bij de handhaving van onttrekkingsverboden.</p>
+        <p><strong>Bereik:</strong> Nederland</p>
+        <p><strong>Financieringsbron:</strong> STOWA, Hoogheemraadschap van Rijnland, Hoogheemraadschap van de Stichtse Rijnlanden, Waterschap Vallei en Veluwe, Waterschap Hunze en Aaâ€™s, Waterschap Scheldestromen, Waterschap Zuiderzeeland</p>
+        <p><strong>Organisatietype:</strong> Bedrijf</p>
+        <p><strong>Samenwerkingspartners:</strong> STOWA, HydroLogic</p>
+        <p><strong>Gebruiker:</strong> Waterschappen, beleidsmakers, agrariërs</p>
+        <p><strong>Website:</strong> <a href="https://www.stowa.nl/nieuws/hoe-ondersteunt-de-beregeningsmonitor-de-waterschappen" target="_blank">https://www.stowa.nl/nieuws/hoe-ondersteunt-de-beregeningsmonitor-de-waterschappen</a></p>
+    </div>
+</li>
+
+<li><span class='project-name' onclick="toggleDetails('12-Boomregister-Wateroverlast')">Boomregister</span>
+    <div id="details-12-Boomregister-Wateroverlast" class="details">
+        <p><strong>Hoofduitvoerder:</strong> NEO</p>
+        <p><strong>Samenvatting:</strong> Het Boomregister biedt een gedetailleerde kaart van alle bomen in Nederland. Dit helpt bij het beheren van stedelijk groen, het monitoren van boomziekten, en het analyseren van klimaatadaptatie en luchtkwaliteit.</p>
+        <p><strong>Bereik:</strong> Nederland</p>
+        <p><strong>Financieringsbron:</strong> Eigen financiering</p>
+        <p><strong>Organisatietype:</strong> Bedrijf</p>
+        <p><strong>Samenwerkingspartners:</strong> Wageningen University & Research, Geodan</p>
+        <p><strong>Gebruiker:</strong> Gemeenten, natuurbeheerders, beleidsmakers, steden</p>
+        <p><strong>Website:</strong> <a href="boomregister.nl" target="_blank">boomregister.nl</a></p>
+    </div>
+</li>
+
+<li><span class='project-name' onclick="toggleDetails('19-CoSMiC-EYE-Wateroverlast')">CoSMiC-EYE</span>
+    <div id="details-19-CoSMiC-EYE-Wateroverlast" class="details">
+        <p><strong>Hoofduitvoerder:</strong> Orbital Eye</p>
+        <p><strong>Samenvatting:</strong> CoSMiC-EYE is een technologie voor het monitoren van waterleidingen met behulp van satellietdata. Het systeem detecteert en rapporteert activiteiten rond het leidingnetwerk, wat helpt om onbekende en moeilijk bereikbare delen van het netwerk te bewaken.</p>
+        <p><strong>Bereik:</strong> Nederland</p>
+        <p><strong>Financieringsbron:</strong> Eigen financiering</p>
+        <p><strong>Organisatietype:</strong> Bedrijf</p>
+        <p><strong>Samenwerkingspartners:</strong> PWN</p>
+        <p><strong>Gebruiker:</strong> Waterleidingbedrijven, Gemeentelijke waterbeheerders</p>
+        <p><strong>Website:</strong> <a href="https://orbitaleye.nl/cosmic-eye-deployed-to-monitor-water-pipelines-after-successful-demonstration/" target="_blank">https://orbitaleye.nl/cosmic-eye-deployed-to-monitor-water-pipelines-after-successful-demonstration/</a></p>
+    </div>
+</li>
+
+<li><span class='project-name' onclick="toggleDetails('22-Copernicus-Climate-Change-Service-(C3S)-Wateroverlast')">Copernicus Climate Change Service (C3S)</span>
+    <div id="details-22-Copernicus-Climate-Change-Service-(C3S)-Wateroverlast" class="details">
+        <p><strong>Hoofduitvoerder:</strong> ECMWF</p>
+        <p><strong>Samenvatting:</strong> C3S biedt gratis toegang tot klimaatgegevens en hulpmiddelen voor monitoring en mitigatie van de gevolgen van klimaatverandering. Het helpt beleidsmakers en onderzoekers om beter geïnformeerde beslissingen te nemen met betrekking tot klimaatadaptatie en -mitigatie.</p>
+        <p><strong>Bereik:</strong> Mondiaal</p>
+        <p><strong>Financieringsbron:</strong> Europese Commissie</p>
+        <p><strong>Organisatietype:</strong> Organisatie</p>
+        <p><strong>Samenwerkingspartners:</strong> KNMI (Koninklijk Nederlands Meteorologisch Instituut), Met Office (VK), MeteoFrance (Frankrijk), DWD (Deutscher Wetterdienst), SMHI (Sweden), BSC (Barcelona Supercomputing Center), CNRS (Centre National de la Recherche Scientifique, Frankrijk), CMCC (Centro Euro-Mediterraneo sui Cambiamenti Climatici, Italië), EUMETSAT (European Organisation for the Exploitation of Meteorological Satellites)</p>
+        <p><strong>Gebruiker:</strong> Beleidsmakers, klimaatonderzoekers, waterbeheerders, landbouwsector, stadsplanners</p>
+        <p><strong>Website:</strong> <a href="https://climate.copernicus.eu/" target="_blank">https://climate.copernicus.eu/</a></p>
+    </div>
+</li>
+
+<li><span class='project-name' onclick="toggleDetails('23-Copernicus-EMS-On-Demand-Mapping-Wateroverlast')">Copernicus EMS On Demand Mapping</span>
+    <div id="details-23-Copernicus-EMS-On-Demand-Mapping-Wateroverlast" class="details">
+        <p><strong>Hoofduitvoerder:</strong> JRC</p>
+        <p><strong>Samenvatting:</strong> Deze dienst biedt op aanvraag gedetailleerde informatie voor geselecteerde noodsituaties als gevolg van natuurlijke of door de mens veroorzaakte rampen wereldwijd. Het omvat snelle kaarten binnen enkele uren of dagen en risicokaarten voor preventie en herstel.</p>
+        <p><strong>Bereik:</strong> Mondiaal</p>
+        <p><strong>Financieringsbron:</strong> Copernicus Programma</p>
+        <p><strong>Organisatietype:</strong> Instituut</p>
+        <p><strong>Samenwerkingspartners:</strong> CEMS, European Space Imaging, e-GEOS, SERTIT, GMV, DLR, Airbus DS, Telespazio, GAF AG.</p>
+        <p><strong>Gebruiker:</strong> Hulporganisaties, overheidsinstanties, rampenbestrijders</p>
+        <p><strong>Website:</strong> <a href="https://emergency.copernicus.eu/" target="_blank">https://emergency.copernicus.eu/</a></p>
+    </div>
+</li>
+
+<li><span class='project-name' onclick="toggleDetails('25-DAISY2-Wateroverlast')">DAISY2</span>
+    <div id="details-25-DAISY2-Wateroverlast" class="details">
+        <p><strong>Hoofduitvoerder:</strong> Thales Nederland</p>
+        <p><strong>Samenvatting:</strong> DAISY2 richt zich op de verdere ontwikkeling en marktverkenning van een compact en mobiel sensorsysteem, specifiek voor meteo-hydrologische voorspellingen en water-voor-voedsel toepassingen. </p>
+        <p><strong>Bereik:</strong> Europa</p>
+        <p><strong>Financieringsbron:</strong> Europese Fonds voor Regionale Ontwikkeling en projectpartners</p>
+        <p><strong>Organisatietype:</strong> Bedrijf</p>
+        <p><strong>Samenwerkingspartners:</strong> NoNXP, TNO, Sencio, Salland Engineering, Sintecs, Noldus, VDM Kunststoftechniek, Etchform, FutureWater, and the Hydrology and Quantitative Water Management Group (HWM) of Wageningen Universitylduss, NXP, TNO, Sencio, Salland Engineering, Sintects, FutureWater, Wageningen University, VDM Textiles, Etchform</p>
+        <p><strong>Gebruiker:</strong> Boeren, waterbeheerders, meteorologen, agrarische bedrijven, ingenieurs, beleidsmakers</p>
+        <p><strong>Website:</strong> <a href="https://www.noldus.com/projects/daisy-2" target="_blank">https://www.noldus.com/projects/daisy-2</a></p>
+    </div>
+</li>
+
+<li><span class='project-name' onclick="toggleDetails('26-Digi-schouw-Wateroverlast')">Digi-schouw</span>
+    <div id="details-26-Digi-schouw-Wateroverlast" class="details">
+        <p><strong>Hoofduitvoerder:</strong> Waterschap Drents Overijsselse Delta</p>
+        <p><strong>Samenvatting:</strong> Het project richt zich op het schouwen van sloten met behulp van satellietbeelden. Dit biedt aanzienlijke tijds- en kostenbesparingen en zorgt voor een efficiëntere inspectie. De satellietbeelden worden geanalyseerd om gebieden te identificeren die nader gecontroleerd moeten worden in het veld.</p>
+        <p><strong>Bereik:</strong> Nederland</p>
+        <p><strong>Financieringsbron:</strong> Waterschap Drents Overijsselse Delta (WDOD), SBIR door NSO</p>
+        <p><strong>Organisatietype:</strong> Overheid</p>
+        <p><strong>Samenwerkingspartners:</strong> CGI, Waterschapshuis, Rijkswaterstaat, STOWA</p>
+        <p><strong>Gebruiker:</strong> Medewerkers van WDOD, agrariërs, landeigenaren</p>
+        <p><strong>Website:</strong> <a href="https://www.wdodelta.nl/resultaten-van-de-schouw" target="_blank">https://www.wdodelta.nl/resultaten-van-de-schouw</a></p>
+    </div>
+</li>
+
+<li><span class='project-name' onclick="toggleDetails('27-DijkInZicht-Wateroverlast')">DijkInZicht</span>
+    <div id="details-27-DijkInZicht-Wateroverlast" class="details">
+        <p><strong>Hoofduitvoerder:</strong> SkyGeo</p>
+        <p><strong>Samenvatting:</strong> DijkInZicht detecteert en analyseert potentiële risico's op dijkfalen op basis van satellietobservatie. Het project biedt beheerders, asset managers en beleidsmakers inzicht in de staat van dijken met hoge waarnemingsfrequentie en vlakdekkende analyse. Het resultaat is een prototype applicatie voor monitoring op afstand.</p>
+        <p><strong>Bereik:</strong> Nederland</p>
+        <p><strong>Financieringsbron:</strong> MIT Zuid-Holland, RVO</p>
+        <p><strong>Organisatietype:</strong> Bedrijf</p>
+        <p><strong>Samenwerkingspartners:</strong> Miramap</p>
+        <p><strong>Gebruiker:</strong> Waterschappen, Dijkbeheerders, Beleidsmakers</p>
+        <p><strong>Website:</strong> <a href="https://data.rvo.nl/subsidies-regelingen/projecten/dijkinzicht" target="_blank">https://data.rvo.nl/subsidies-regelingen/projecten/dijkinzicht</a></p>
+    </div>
+</li>
+
+<li><span class='project-name' onclick="toggleDetails('28-DijkScan-Wateroverlast')">DijkScan</span>
+    <div id="details-28-DijkScan-Wateroverlast" class="details">
+        <p><strong>Hoofduitvoerder:</strong> Sensar</p>
+        <p><strong>Samenvatting:</strong> DijkScan helpt waterschappen bij het ontwerpen van dijkversterkingen en het monitoren van panden tijdens werkzaamheden. Het gebruikt InSAR-satellietmetingen om de historische en actuele zettingssnelheid van dijken nauwkeurig te meten en voorspellingen te doen.</p>
+        <p><strong>Bereik:</strong> Nederland</p>
+        <p><strong>Financieringsbron:</strong> Eigen financiering</p>
+        <p><strong>Organisatietype:</strong> Bedrijf</p>
+        <p><strong>Samenwerkingspartners:</strong> Hoogheemraadschap de Stichtse Rijnlanden</p>
+        <p><strong>Gebruiker:</strong> Waterschappen, Dijkbeheerders</p>
+        <p><strong>Website:</strong> <a href="https://sensar.nl/dijkscan/" target="_blank">https://sensar.nl/dijkscan/</a></p>
+    </div>
+</li>
+
+<li><span class='project-name' onclick="toggleDetails('31-Droogtemonitoring-in-waterlopen-Wateroverlast')">Droogtemonitoring in waterlopen</span>
+    <div id="details-31-Droogtemonitoring-in-waterlopen-Wateroverlast" class="details">
+        <p><strong>Hoofduitvoerder:</strong> NEO</p>
+        <p><strong>Samenvatting:</strong> Het project richt zich op het monitoren van droogte in waterlopen met behulp van zeer hoge resolutie optische en radar satellietdata. Dit helpt waterschappen actuele data te verkrijgen over de droogte van waterlopen en mogelijke ecologische schade.</p>
+        <p><strong>Bereik:</strong> Nederland</p>
+        <p><strong>Financieringsbron:</strong> Waterschap Aa en Maas</p>
+        <p><strong>Organisatietype:</strong> Bedrijf</p>
+        <p><strong>Samenwerkingspartners:</strong> Waterschap Aa en Maas, Capella Space</p>
+        <p><strong>Gebruiker:</strong> Waterschap Aa en Maas, waterbeheerders, beleidsmakers</p>
+        <p><strong>Website:</strong> <a href="https://www.neo.nl/nieuwsarchief/wateroverlast-monitoring/" target="_blank">https://www.neo.nl/nieuwsarchief/wateroverlast-monitoring/</a></p>
+    </div>
+</li>
+
+<li><span class='project-name' onclick="toggleDetails('37-Dynamische-Infiltratiekaart-Wateroverlast')">Dynamische Infiltratiekaart</span>
+    <div id="details-37-Dynamische-Infiltratiekaart-Wateroverlast" class="details">
+        <p><strong>Hoofduitvoerder:</strong> Cobra Groeninzicht</p>
+        <p><strong>Samenvatting:</strong> De Dynamische Infiltratiekaart van Cobra Groeninzicht gebruikt Remote Sensing technieken en artificiële intelligentie om op stoeptegelniveau te berekenen hoeveel water in de grond kan infiltreren. Dit project helpt bij het herinrichten van het watersysteem om wateroverlast te voorkomen en de gevolgen van klimaatverandering te mitigeren.</p>
+        <p><strong>Bereik:</strong> Nederland</p>
+        <p><strong>Financieringsbron:</strong> RVO, SBIR door NSO</p>
+        <p><strong>Organisatietype:</strong> Bedrijf</p>
+        <p><strong>Samenwerkingspartners:</strong> Gemeente Rheden, Gemeente Nijmegen, Gemeente Eindhoven, RVO, NSO, academisch panel</p>
+        <p><strong>Gebruiker:</strong> Beleidsmakers, gemeenten, waterschappen, burgers</p>
+        <p><strong>Website:</strong> <a href="https://www.cobra-groeninzicht.nl/" target="_blank">https://www.cobra-groeninzicht.nl/</a></p>
+    </div>
+</li>
+
+<li><span class='project-name' onclick="toggleDetails('40-Early-warning-system-for-levee-stability-Wateroverlast')">Early warning system for levee stability</span>
+    <div id="details-40-Early-warning-system-for-levee-stability-Wateroverlast" class="details">
+        <p><strong>Hoofduitvoerder:</strong> SkyGeo</p>
+        <p><strong>Samenvatting:</strong> Het Lauwersmeerdijk beschermt de provincie Groningen tegen overstromingen. SkyGeo monitort sinds 2010 de dijk op instabiliteiten door een erosiekanaal dat snel zand verwijdert aan het onderwaterdeel van de dijk. Het systeem biedt een vroegtijdig waarschuwingssysteem om instabiliteiten te detecteren.</p>
+        <p><strong>Bereik:</strong> Nederland</p>
+        <p><strong>Financieringsbron:</strong> Waterschap Noorderzijlvest</p>
+        <p><strong>Organisatietype:</strong> Bedrijf</p>
+        <p><strong>Samenwerkingspartners:</strong> -</p>
+        <p><strong>Gebruiker:</strong> Waterschappen, Dijkbeheerders</p>
+        <p><strong>Website:</strong> <a href="https://skygeo.com/2022/02/28/noorderzijlvest-uses-early-warning-system-for-levee-stability/" target="_blank">https://skygeo.com/2022/02/28/noorderzijlvest-uses-early-warning-system-for-levee-stability/</a></p>
+    </div>
+</li>
+
+<li><span class='project-name' onclick="toggleDetails('41-European-Flood-Awareness-System-(EFAS)-Wateroverlast')">European Flood Awareness System (EFAS)</span>
+    <div id="details-41-European-Flood-Awareness-System-(EFAS)-Wateroverlast" class="details">
+        <p><strong>Hoofduitvoerder:</strong> JRC</p>
+        <p><strong>Samenvatting:</strong> EFAS biedt Europa-brede overzichten en voorspellingen van overstromingen tot 10 dagen vooruit. Het helpt nationale en regionale autoriteiten bij overstromingsbeheer en -voorbereiding.</p>
+        <p><strong>Bereik:</strong> Europa</p>
+        <p><strong>Financieringsbron:</strong> Copernicus Programma</p>
+        <p><strong>Organisatietype:</strong> Instituut</p>
+        <p><strong>Samenwerkingspartners:</strong> ECMWF, CEMS, DWD, KISTERS, SMHI, SHMI, Rijkswaterstaat, ICPDR, nationale en regionale hydrologische en meteorologische diensten van de EU-lidstaten.</p>
+        <p><strong>Gebruiker:</strong> Nationale en regionale hydrologische en meteorologische diensten, beleidsmakers, rampenbestrijders</p>
+        <p><strong>Website:</strong> <a href="efas.eu" target="_blank">efas.eu</a></p>
+    </div>
+</li>
+
+<li><span class='project-name' onclick="toggleDetails('42-FAST-Wateroverlast')">FAST</span>
+    <div id="details-42-FAST-Wateroverlast" class="details">
+        <p><strong>Hoofduitvoerder:</strong> NIOZ</p>
+        <p><strong>Samenvatting:</strong> FAST onderzoekt hoe de natuurlijke eigenschappen van vegetatie op vooroevers golfenergie kunnen verminderen en bijdragen aan de kustbescherming in Europa. Het combineert remote sensing en veldgegevens om de effectiviteit van vegetatieve vooroevers in het verminderen van overstromings- en erosierisico's te beoordelen.</p>
+        <p><strong>Bereik:</strong> Europa</p>
+        <p><strong>Financieringsbron:</strong> Europese Gemeenschap</p>
+        <p><strong>Organisatietype:</strong> Instituut</p>
+        <p><strong>Samenwerkingspartners:</strong> -</p>
+        <p><strong>Gebruiker:</strong> Kustbeheerders, overheidsinstanties, NGO's, industrieconsultants, burgers</p>
+        <p><strong>Website:</strong> <a href="https://www.nioz.nl/en/research/projects/4118-0" target="_blank">https://www.nioz.nl/en/research/projects/4118-0</a></p>
+    </div>
+</li>
+
+<li><span class='project-name' onclick="toggleDetails('43-Flood-Security-from-Space-Wateroverlast')">Flood Security from Space</span>
+    <div id="details-43-Flood-Security-from-Space-Wateroverlast" class="details">
+        <p><strong>Hoofduitvoerder:</strong> Space4Good</p>
+        <p><strong>Samenvatting:</strong> Flood Security from Space maakt gebruik van radar remote sensing om overstromingen te detecteren en te monitoren. Het project richt zich op het leveren van nauwkeurige en tijdige gegevens om de impact van overstromingen te minimaliseren en de besluitvorming te verbeteren.</p>
+        <p><strong>Bereik:</strong> Mondiaal</p>
+        <p><strong>Financieringsbron:</strong> Eigen financiering</p>
+        <p><strong>Organisatietype:</strong> Bedrijf</p>
+        <p><strong>Samenwerkingspartners:</strong> -</p>
+        <p><strong>Gebruiker:</strong> Overheden, Hulporganisaties, Verzekeringsmaatschappijen</p>
+        <p><strong>Website:</strong> <a href="https://www.space4good.com/post/flood-security-from-space" target="_blank">https://www.space4good.com/post/flood-security-from-space</a></p>
+    </div>
+</li>
+
+<li><span class='project-name' onclick="toggleDetails('44-FloodHub-Wateroverlast')">FloodHub</span>
+    <div id="details-44-FloodHub-Wateroverlast" class="details">
+        <p><strong>Hoofduitvoerder:</strong> Google</p>
+        <p><strong>Samenvatting:</strong> Google FloodHub gebruikt AI om overstromingen te voorspellen en levensreddende waarschuwingen te leveren aan 460 miljoen mensen wereldwijd. Het platform combineert hydrologische en inundatiemodellen en satellietdata om voorspellingen te maken van overstromingen tot 7 dagen van tevoren, zelfs in gebieden met beperkte gegevens.</p>
+        <p><strong>Bereik:</strong> Mondiaal</p>
+        <p><strong>Financieringsbron:</strong> Eigen financiering</p>
+        <p><strong>Organisatietype:</strong> Bedrijf</p>
+        <p><strong>Samenwerkingspartners:</strong> World Meteorological Organization (WMO), VN, diverse nationale en lokale overheden</p>
+        <p><strong>Gebruiker:</strong> Beleidsmakers, hulporganisaties, lokale overheden, burgers</p>
+        <p><strong>Website:</strong> <a href="https://floodhub.google/" target="_blank">https://floodhub.google/</a></p>
+    </div>
+</li>
+
+<li><span class='project-name' onclick="toggleDetails('45-FloodSENS-Wateroverlast')">FloodSENS</span>
+    <div id="details-45-FloodSENS-Wateroverlast" class="details">
+        <p><strong>Hoofduitvoerder:</strong> RSS-Hydro</p>
+        <p><strong>Samenvatting:</strong> FloodSENS ontwikkelt een algoritme om overstroomde gebieden nauwkeurig in kaart te brengen, zelfs onder gedeeltelijke bewolking, met behulp van machine learning en digitale hoogte modellen. Dit project helpt bij het verbeteren van de respons op overstromingen en het bieden van betrouwbaardere overstromingskaarten voor verzekeringen en humanitaire hulp.</p>
+        <p><strong>Bereik:</strong> Mondiaal</p>
+        <p><strong>Financieringsbron:</strong> ESA InCubed programma</p>
+        <p><strong>Organisatietype:</strong> Bedrijf</p>
+        <p><strong>Samenwerkingspartners:</strong> United Nations World Food Programma (UN WFP), National Disasters Management Institute of Mozambique (INGC), Willis Towers Watson (WTW)</p>
+        <p><strong>Gebruiker:</strong> Humanitaire organisaties, Verzekeringsmaatschappijen, Overheden</p>
+        <p><strong>Website:</strong> <a href="https://incubed.esa.int/portfolio/floodsens/" target="_blank">https://incubed.esa.int/portfolio/floodsens/</a></p>
+    </div>
+</li>
+
+<li><span class='project-name' onclick="toggleDetails('46-FloodSmart-Wateroverlast')">FloodSmart</span>
+    <div id="details-46-FloodSmart-Wateroverlast" class="details">
+        <p><strong>Hoofduitvoerder:</strong> Nelen & Schuurmans</p>
+        <p><strong>Samenvatting:</strong> FloodSmart is een systeem voor vroegtijdige waarschuwingen en overstromingsvoorspellingen. Het integreert historische en voorspellende data, inclusief satellietobservaties, om risico's te beheren en gemeenschappen wereldwijd voor te bereiden op overstromingen.</p>
+        <p><strong>Bereik:</strong> Mondiaal</p>
+        <p><strong>Financieringsbron:</strong> Eigen financiering</p>
+        <p><strong>Organisatietype:</strong> Bedrijf</p>
+        <p><strong>Samenwerkingspartners:</strong> -</p>
+        <p><strong>Gebruiker:</strong> Waterbeheerders, beleidsmakers, gemeenten, steden, noodhulporganisaties, verzekeringsmaatschappijen</p>
+        <p><strong>Website:</strong> <a href="https://nelen-schuurmans.nl/en/consultancy/floodsmart/" target="_blank">https://nelen-schuurmans.nl/en/consultancy/floodsmart/</a></p>
+    </div>
+</li>
+
+<li><span class='project-name' onclick="toggleDetails('47-Floodplain-Vegetation-Study-Wateroverlast')">Floodplain Vegetation Study</span>
+    <div id="details-47-Floodplain-Vegetation-Study-Wateroverlast" class="details">
+        <p><strong>Hoofduitvoerder:</strong> HiView</p>
+        <p><strong>Samenvatting:</strong> De Floodplain Vegetation Study richt zich op het bestuderen van vegetatie in overstromingsvlakten om overstromingsrisico's beter te begrijpen en te beheren.</p>
+        <p><strong>Bereik:</strong> Europa</p>
+        <p><strong>Financieringsbron:</strong> NWO</p>
+        <p><strong>Organisatietype:</strong> Bedrijf</p>
+        <p><strong>Samenwerkingspartners:</strong> Utrecht University</p>
+        <p><strong>Gebruiker:</strong> Waterbeheerders, ecologen, beleidsmakers, onderzoekers</p>
+        <p><strong>Website:</strong> <a href="https://www.hiview.nl/floodplain-vegetation-study" target="_blank">https://www.hiview.nl/floodplain-vegetation-study</a></p>
+    </div>
+</li>
+
+<li><span class='project-name' onclick="toggleDetails('48-Floodwater-Depth-Estimation-Tool-Wateroverlast')">Floodwater Depth Estimation Tool</span>
+    <div id="details-48-Floodwater-Depth-Estimation-Tool-Wateroverlast" class="details">
+        <p><strong>Hoofduitvoerder:</strong> Universiteit van Alabama</p>
+        <p><strong>Samenvatting:</strong> Een tool die de diepte van overstromingswater berekent met behulp van een digitaal hoogte model en een overstromingspolygoon.</p>
+        <p><strong>Bereik:</strong> Mondiaal</p>
+        <p><strong>Financieringsbron:</strong> NASA Applied Sci. Disasters Program</p>
+        <p><strong>Organisatietype:</strong> Universiteit</p>
+        <p><strong>Samenwerkingspartners:</strong> University of Colorado, Community Surface Dynamics Modeling System (CSDMS), Google Earth Engine</p>
+        <p><strong>Gebruiker:</strong> Overheden, Hulporganisaties, Verzekeringsmaatschappijen</p>
+        <p><strong>Website:</strong> <a href="https://sdml.ua.edu/models/fwdet/" target="_blank">https://sdml.ua.edu/models/fwdet/</a></p>
+    </div>
+</li>
+
+<li><span class='project-name' onclick="toggleDetails('50-Global-Hydrological-Status-and-Outlook-System-(HydroSOS)-Wateroverlast')">Global Hydrological Status and Outlook System (HydroSOS)</span>
+    <div id="details-50-Global-Hydrological-Status-and-Outlook-System-(HydroSOS)-Wateroverlast" class="details">
+        <p><strong>Hoofduitvoerder:</strong> WMO</p>
+        <p><strong>Samenvatting:</strong> HydroSOS biedt een wereldwijd operationeel systeem dat de huidige status van hydrologische systemen (oppervlakte- en grondwater) beoordeelt en voorspelt hoe deze in de nabije toekomst zullen veranderen. Het systeem ondersteunt nationale hydrologische diensten bij het leveren van betrouwbare waterinformatie aan belanghebbenden in verschillende sectoren.</p>
+        <p><strong>Bereik:</strong> Mondiaal</p>
+        <p><strong>Financieringsbron:</strong> WMO, UK Centre for Ecology & Hydrology (UKCEH)</p>
+        <p><strong>Organisatietype:</strong> Organisatie</p>
+        <p><strong>Samenwerkingspartners:</strong> National Hydrological Services van 20 landen, UK Centre for Ecology & Hydrology, regionale klimaatcentra, river basin organisaties</p>
+        <p><strong>Gebruiker:</strong> National Hydrological Services van 20 landen, UK Centre for Ecology & Hydrology, regionale klimaatcentra, river basin organisaties</p>
+        <p><strong>Website:</strong> <a href="https://wmohydrosos.ceh.ac.uk/" target="_blank">https://wmohydrosos.ceh.ac.uk/</a></p>
+    </div>
+</li>
+
+<li><span class='project-name' onclick="toggleDetails('51-Global-Surface-Water-Explorer-Wateroverlast')">Global Surface Water Explorer</span>
+    <div id="details-51-Global-Surface-Water-Explorer-Wateroverlast" class="details">
+        <p><strong>Hoofduitvoerder:</strong> JRC</p>
+        <p><strong>Samenvatting:</strong> De Global Surface Water Explorer (GSWE) biedt kaarten en statistieken van de locatie, verspreiding en veranderingen in de oppervlaktewateren wereldwijd over de afgelopen 3,8 decennia. Het ondersteunt waterbeheer, klimaatmodellering, biodiversiteitsbehoud en voedselzekerheid.</p>
+        <p><strong>Bereik:</strong> Mondiaal</p>
+        <p><strong>Financieringsbron:</strong> Copernicus Programma</p>
+        <p><strong>Organisatietype:</strong> Instituut</p>
+        <p><strong>Samenwerkingspartners:</strong> UN Environment, Google Earth Engine</p>
+        <p><strong>Gebruiker:</strong> Waterbeheerders, beleidsmakers, onderzoekers, milieuorganisaties</p>
+        <p><strong>Website:</strong> <a href="global-surface-water.appspot.com" target="_blank">global-surface-water.appspot.com</a></p>
+    </div>
+</li>
+
+<li><span class='project-name' onclick="toggleDetails('53-Global-Water-Watch-Wateroverlast')">Global Water Watch</span>
+    <div id="details-53-Global-Water-Watch-Wateroverlast" class="details">
+        <p><strong>Hoofduitvoerder:</strong> Deltares</p>
+        <p><strong>Samenvatting:</strong> Global Water Watch biedt gratis, wereldwijd toegankelijke, near-real-time informatie over water in reservoirs en grote riviersystemen. Het platform maakt gebruik van moderne AI- en EO-algoritmen om dammen in kaart te brengen en hoge-resolutie spatio-temporele informatie te genereren over de hoeveelheid opgeslagen water en de waterstanden en stromingen.</p>
+        <p><strong>Bereik:</strong> Mondiaal</p>
+        <p><strong>Financieringsbron:</strong> Google.org, Water, Peace, and Security Partnership</p>
+        <p><strong>Organisatietype:</strong> Instituut</p>
+        <p><strong>Samenwerkingspartners:</strong> World Resources Institute, World Wildlife Fund, Google.org, Water, Peace, and Security Partnership</p>
+        <p><strong>Gebruiker:</strong> Waterbeheerders, beleidsmakers, NGO's, landbouwsector, hydro-elektrische sector, scheepvaartsector, overheidsinstellingen</p>
+        <p><strong>Website:</strong> <a href="https://www.globalwaterwatch.earth" target="_blank">https://www.globalwaterwatch.earth</a></p>
+    </div>
+</li>
+
+<li><span class='project-name' onclick="toggleDetails('55-Groenmonitor-Wateroverlast')">Groenmonitor</span>
+    <div id="details-55-Groenmonitor-Wateroverlast" class="details">
+        <p><strong>Hoofduitvoerder:</strong> Wageningen University & Research</p>
+        <p><strong>Samenvatting:</strong> De Groenmonitor biedt een actuele vegetatiekaart van Nederland op basis van satellietbeelden. De groenindex (NDVI) wordt berekend voor onbewolkte satellietbeelden, wat helpt bij het volgen van gewasontwikkeling en natuurprocessen.</p>
+        <p><strong>Bereik:</strong> Nederland</p>
+        <p><strong>Financieringsbron:</strong> Ministerie van Economische Zaken en Klimaat</p>
+        <p><strong>Organisatietype:</strong> Universiteit</p>
+        <p><strong>Samenwerkingspartners:</strong> ESA, diverse gemeenten</p>
+        <p><strong>Gebruiker:</strong> Landbouwers, Natuurbeheerders, Overheden</p>
+        <p><strong>Website:</strong> <a href="https://www.groenmonitor.nl/" target="_blank">https://www.groenmonitor.nl/</a></p>
+    </div>
+</li>
+
+<li><span class='project-name' onclick="toggleDetails('57-HydroCity-Wateroverlast')">HydroCity</span>
+    <div id="details-57-HydroCity-Wateroverlast" class="details">
+        <p><strong>Hoofduitvoerder:</strong> NEO</p>
+        <p><strong>Samenvatting:</strong> Het project HydroCity richt zich op het verbeteren van het stedelijk waterbeheer en klimaatadaptatie door middel van water- en geo-innovaties. Het biedt waterbeheerders nauwkeurige informatie over het stedelijk watersysteem om effectief beheer en risico-inperking mogelijk te maken.</p>
+        <p><strong>Bereik:</strong> Nederland</p>
+        <p><strong>Financieringsbron:</strong> SBIR door NSO, Ministerie van Infrastructuur en Waterstaat</p>
+        <p><strong>Organisatietype:</strong> Bedrijf</p>
+        <p><strong>Samenwerkingspartners:</strong> HydroLogic, Gemeente Amersfoort</p>
+        <p><strong>Gebruiker:</strong> Waterbeheerders, gemeenten, steden</p>
+        <p><strong>Website:</strong> <a href="https://www.neo.nl/nieuwsarchief/hydrocity/" target="_blank">https://www.neo.nl/nieuwsarchief/hydrocity/</a></p>
+    </div>
+</li>
+
+<li><span class='project-name' onclick="toggleDetails('58-HydroNET-Wateroverlast')">HydroNET</span>
+    <div id="details-58-HydroNET-Wateroverlast" class="details">
+        <p><strong>Hoofduitvoerder:</strong> Hydrologic</p>
+        <p><strong>Samenvatting:</strong> HydroNET is een cloud-gebaseerd besluitvormingsondersteunend systeem dat waterbeheerders helpt om beter te anticiperen op extreme weersomstandigheden door datagestuurde waterbeheerbeslissingen mogelijk te maken. Het platform integreert gegevens uit verschillende bronnen, creëert waterintelligentie door middel van data science en modellering, en genereert dashboards, geautomatiseerde rapporten en persoonlijke waarschuwingen die zijn afgestemd op de behoeften van personeel en belanghebbenden.</p>
+        <p><strong>Bereik:</strong> Mondiaal</p>
+        <p><strong>Financieringsbron:</strong> Eigen financiering</p>
+        <p><strong>Organisatietype:</strong> Bedrijf</p>
+        <p><strong>Samenwerkingspartners:</strong> Arcadis US, Arcadis UK, HydroLogic</p>
+        <p><strong>Gebruiker:</strong> Waterbeheerders, overheidsinstanties, kennisinstituten, steden en gemeenten, nationale weersdiensten</p>
+        <p><strong>Website:</strong> <a href="https://www.hydronet.nl/" target="_blank">https://www.hydronet.nl/</a></p>
+    </div>
+</li>
+
+<li><span class='project-name' onclick="toggleDetails('61-IMPETUS-Wateroverlast')">IMPETUS</span>
+    <div id="details-61-IMPETUS-Wateroverlast" class="details">
+        <p><strong>Hoofduitvoerder:</strong> Climate IMPETUS</p>
+        <p><strong>Samenvatting:</strong> Climate IMPETUS gebruikt satellietdata in combinatie met maatschappelijke, economische en milieugegevens om klimaatadaptatiestrategieën te ontwikkelen voor verschillende regio's in Europa. Het project focust op het creëren van 'Resilience Knowledge Boosters' en ondersteunt lokale gemeenschappen bij het nemen van klimaatadaptieve maatregelen.</p>
+        <p><strong>Bereik:</strong> Europa</p>
+        <p><strong>Financieringsbron:</strong> Horizon 2020</p>
+        <p><strong>Organisatietype:</strong> Organisatie</p>
+        <p><strong>Samenwerkingspartners:</strong> Athens University Of Economics And Business - Research Center, Athens Water Supply and Sewerage Company, Baltijas Vides Forums, Berliner Wasserbetriebe, BIM Sarca Consortium, Cantina Toblino SCA, Departament d'Acció Climàtica, Alimentació I Agenda Rural - Generalitat de Catalunya, EURAC research - European Academy of Bolzano, ESCI, Global Climate Forum EV, International Union for Conservation of Nature, Jelgava city Municipality, Kompetenzzentrum Wasser Berlin gemeinnuetzige Gmbh, KWR Water b.v., Lobelia Earth SL, Mediterranean Agronomic Institute Of Chania, Hellenic Ministry of Environment and Energy, Mantis Business Innovation, Waterjade, Mountain Research Initiative - University of Bern, Nelen & Schuurmans, National Technical University Of Athens, Senate Department for the Environment, Urban Mobility, Consumer Protection and Climate Action, SDSN Association Paris, Troms and Finnmark County Municipalities, Thetis SPA, University of Tromsoe - Norwegian Arctic University, Universitat Rovira I Virgili, University of Girona, Water Energy Intelligence BV, Zemgale Planning region</p>
+        <p><strong>Gebruiker:</strong> Beleidsmakers, lokale gemeenschappen, bedrijven in sectoren zoals landbouw, aquacultuur, visserij, maritieme ruimtelijke planning, bosbouw en toerisme.</p>
+        <p><strong>Website:</strong> <a href="https://climate-impetus.eu/" target="_blank">https://climate-impetus.eu/</a></p>
+    </div>
+</li>
+
+<li><span class='project-name' onclick="toggleDetails('66-Inundation-Monitoring-Wateroverlast')">Inundation Monitoring</span>
+    <div id="details-66-Inundation-Monitoring-Wateroverlast" class="details">
+        <p><strong>Hoofduitvoerder:</strong> VanderSat (nu deel van Planet)</p>
+        <p><strong>Samenvatting:</strong> Dit project gebruikt Sentinel-1 data om overstromingen in kaart te brengen. De methode maakt gebruik van C-band radar om open water te detecteren en genereert inundatiekaarten na elke satellietovergang. Deze kaarten helpen bij het beheren van wateroverlast en bij het nemen van preventieve maatregelen.</p>
+        <p><strong>Bereik:</strong> Nederland</p>
+        <p><strong>Financieringsbron:</strong> Eigen financiering</p>
+        <p><strong>Organisatietype:</strong> Bedrijf</p>
+        <p><strong>Samenwerkingspartners:</strong> -</p>
+        <p><strong>Gebruiker:</strong> Overheden, Waterschappen, Hulporganisaties</p>
+        <p><strong>Website:</strong> <a href="docs.vandersat.com" target="_blank">docs.vandersat.com</a></p>
+    </div>
+</li>
+
+<li><span class='project-name' onclick="toggleDetails('69-Klimaateffectatlas-Wateroverlast')">Klimaateffectatlas</span>
+    <div id="details-69-Klimaateffectatlas-Wateroverlast" class="details">
+        <p><strong>Hoofduitvoerder:</strong> Stichting Climate Adaptation Services (CAS)</p>
+        <p><strong>Samenvatting:</strong> De Klimaateffectatlas biedt uitgebreide informatie over de gevolgen van klimaatverandering in Nederland. Het bevat kaarten en data over overstromingen, droogte, hitte, en wateroverlast om beleidsmakers en planners te helpen bij het nemen van adaptatiemaatregelen.</p>
+        <p><strong>Bereik:</strong> Nederland</p>
+        <p><strong>Financieringsbron:</strong> Ministerie van Infrastructuur en Waterstaat</p>
+        <p><strong>Organisatietype:</strong> Instituut</p>
+        <p><strong>Samenwerkingspartners:</strong> Deltares, KNMI, Wageningen University & Research, TNO, Rijkswaterstaat, PBL</p>
+        <p><strong>Gebruiker:</strong> Beleidsmakers, gemeenten, waterschappen, burgers</p>
+        <p><strong>Website:</strong> <a href="klimaateffectatlas.nl" target="_blank">klimaateffectatlas.nl</a></p>
+    </div>
+</li>
+
+<li><span class='project-name' onclick="toggleDetails('73-Landbouwinspecties-met-satellietdata-Wateroverlast')">Landbouwinspecties met satellietdata</span>
+    <div id="details-73-Landbouwinspecties-met-satellietdata-Wateroverlast" class="details">
+        <p><strong>Hoofduitvoerder:</strong> NSO</p>
+        <p><strong>Samenvatting:</strong> Dit project richt zich op het verbeteren van de efficiëntie effectiviteit van NVWA-inspecties door het gebruik van satellietdata. Het controleert naleving van regels voor vanggewassen, plas-dras gebieden en maaidata, wat helpt bij een nauwkeurige naleving van landbouwsubsidievoorwaarden.</p>
+        <p><strong>Bereik:</strong> Nederland</p>
+        <p><strong>Financieringsbron:</strong> SBIR door NSO</p>
+        <p><strong>Organisatietype:</strong> Overheid</p>
+        <p><strong>Samenwerkingspartners:</strong> NVWA, Ministerie van Economische Zaken en Klimaat</p>
+        <p><strong>Gebruiker:</strong> NVWA, Landbouwers en boeren</p>
+        <p><strong>Website:</strong> <a href="https://www.spaceoffice.nl/files/SBIR/NVWA_landbouwinspecties.pdf" target="_blank">https://www.spaceoffice.nl/files/SBIR/NVWA_landbouwinspecties.pdf</a></p>
+    </div>
+</li>
+
+<li><span class='project-name' onclick="toggleDetails('76-Maaien-en-meten-voor-een-digital-twin-Wateroverlast')">Maaien en meten voor een digital twin</span>
+    <div id="details-76-Maaien-en-meten-voor-een-digital-twin-Wateroverlast" class="details">
+        <p><strong>Hoofduitvoerder:</strong> Waterschap Aa en Maas</p>
+        <p><strong>Samenvatting:</strong> Dit project maakt gebruik van een digital twin, een virtuele kopie van sloten in Oost-Brabant, om het beheer van waterlopen te optimaliseren. Met gps-sensoren op maaikorf worden tijdens het maaien 3D-gegevens verzameld, die helpen bij voorspellingen van droogte en overstromingen en het bepalen van onderhoudsmaatregelen zoals baggeren.</p>
+        <p><strong>Bereik:</strong> Nederland</p>
+        <p><strong>Financieringsbron:</strong> Eigen financiering</p>
+        <p><strong>Organisatietype:</strong> Overheid</p>
+        <p><strong>Samenwerkingspartners:</strong> Gebroeders van Erp, Van Berkel, Klever</p>
+        <p><strong>Gebruiker:</strong> Waterbeheerders, onderaannemers, agrariërs, beleidsmakers</p>
+        <p><strong>Website:</strong> <a href="https://www.aaenmaas.nl/actueel/nieuws/2022/oktober/maaien-meten-digital-twin/" target="_blank">https://www.aaenmaas.nl/actueel/nieuws/2022/oktober/maaien-meten-digital-twin/</a></p>
+    </div>
+</li>
+
+<li><span class='project-name' onclick="toggleDetails('78-Modelling-Salt-Marshes-with-the-aid-of-Satellite-Imaging-Wateroverlast')">Modelling Salt Marshes with the aid of Satellite Imaging</span>
+    <div id="details-78-Modelling-Salt-Marshes-with-the-aid-of-Satellite-Imaging-Wateroverlast" class="details">
+        <p><strong>Hoofduitvoerder:</strong> NLR</p>
+        <p><strong>Samenvatting:</strong> Dit project richt zich op het in kaart brengen van de structuur van zoutmoerassen met behulp van satellietbeelden. Het doel is om morfologische patronen van getijdenmoerassen te onthullen en te begrijpen hoe deze worden gevormd, wat bijdraagt aan kustbescherming en recreatie.</p>
+        <p><strong>Bereik:</strong> Europa</p>
+        <p><strong>Financieringsbron:</strong> Eigen financiering</p>
+        <p><strong>Organisatietype:</strong> Instituut</p>
+        <p><strong>Samenwerkingspartners:</strong> Alkyon (nu deel van Arcadis), GeoValley consortium</p>
+        <p><strong>Gebruiker:</strong> Kustbeheerders, ecologen, ingenieurs, beleidsmakers, recreatiebedrijven</p>
+        <p><strong>Website:</strong> <a href="https://www.nlr.org/case/modelling-salt-marshes-aid-satellite-imaging/" target="_blank">https://www.nlr.org/case/modelling-salt-marshes-aid-satellite-imaging/</a></p>
+    </div>
+</li>
+
+<li><span class='project-name' onclick="toggleDetails('79-Monitoring-Houtribdijk-Lakeside-Wateroverlast')">Monitoring Houtribdijk Lakeside</span>
+    <div id="details-79-Monitoring-Houtribdijk-Lakeside-Wateroverlast" class="details">
+        <p><strong>Hoofduitvoerder:</strong> SHORE</p>
+        <p><strong>Samenvatting:</strong> Het project richt zich op het monitoren van de ontwikkeling van de zandige vooroever van de Houtribdijk, die de IJsselmeer en Markermeer scheidt. Dit wordt gedaan door topografische metingen met SHORE's Mobile LiDAR-systeem en gebiedsdekkende bathymetrische kaarten te maken.</p>
+        <p><strong>Bereik:</strong> Nederland</p>
+        <p><strong>Financieringsbron:</strong> Rijkswaterstaat</p>
+        <p><strong>Organisatietype:</strong> Bedrijf</p>
+        <p><strong>Samenwerkingspartners:</strong> Rijkswaterstaat</p>
+        <p><strong>Gebruiker:</strong> Rijkswaterstaat, Waterbeheerders</p>
+        <p><strong>Website:</strong> <a href="https://shoremonitoring.nl/projects/monitoring-houtribdijk-lakeside" target="_blank">https://shoremonitoring.nl/projects/monitoring-houtribdijk-lakeside</a></p>
+    </div>
+</li>
+
+<li><span class='project-name' onclick="toggleDetails('81-Monitoring-waterkeringen-met-een-RPAS-(drone)-Wateroverlast')">Monitoring waterkeringen met een RPAS (drone)</span>
+    <div id="details-81-Monitoring-waterkeringen-met-een-RPAS-(drone)-Wateroverlast" class="details">
+        <p><strong>Hoofduitvoerder:</strong> STOWA</p>
+        <p><strong>Samenvatting:</strong> Het project onderzoekt hoe het gebruik van drones (RPAS) kan bijdragen aan efficiënter en beter monitoren van waterkeringen. Drones worden ingezet om visuele inspecties te verrijken met data over kruinhoogte, schade, grasbedekking en ongewenste vegetatie, wat de betrouwbaarheid van inspecties verhoogt.</p>
+        <p><strong>Bereik:</strong> Nederland</p>
+        <p><strong>Financieringsbron:</strong> STOWA, rijkswaterstaat</p>
+        <p><strong>Organisatietype:</strong> Organisatie</p>
+        <p><strong>Samenwerkingspartners:</strong> Down2Earth Sensing, vijf waterschappen</p>
+        <p><strong>Gebruiker:</strong> Waterschappen, Waterbeheerders</p>
+        <p><strong>Website:</strong> <a href="https://www.handreikinggrasbekleding.nl/inspectie/monitoring/monitoring-waterkeringen-met-een-rpas-drone" target="_blank">https://www.handreikinggrasbekleding.nl/inspectie/monitoring/monitoring-waterkeringen-met-een-rpas-drone</a></p>
+    </div>
+</li>
+
+<li><span class='project-name' onclick="toggleDetails('83-Mutatieherkenning-in-het-Agrarisch-Areaal-Nederland-(AAN)-Wateroverlast')">Mutatieherkenning in het Agrarisch Areaal Nederland (AAN)</span>
+    <div id="details-83-Mutatieherkenning-in-het-Agrarisch-Areaal-Nederland-(AAN)-Wateroverlast" class="details">
+        <p><strong>Hoofduitvoerder:</strong> NSO</p>
+        <p><strong>Samenvatting:</strong> Dit project richt zich op het geautomatiseerd detecteren van veranderingen in agrarische percelen met behulp van satellietdata. Het doel is om efficiënter wijzigingen te kunnen bijhouden in het systeem Agrarisch Areaal Nederland (AAN), wat bijdraagt aan het onderhouden van een nauwkeurige database en het verminderen van kosten voor handmatige inspecties.</p>
+        <p><strong>Bereik:</strong> Nederland</p>
+        <p><strong>Financieringsbron:</strong> SBIR door NSO</p>
+        <p><strong>Organisatietype:</strong> Overheid</p>
+        <p><strong>Samenwerkingspartners:</strong> RVO, Ministerie van Economische Zaken en Klimaat</p>
+        <p><strong>Gebruiker:</strong> Landbouwers en boeren, Waterbeheer organisaties</p>
+        <p><strong>Website:</strong> <a href="https://www.spaceoffice.nl/files/SBIR/RVO_mutatieherkenning.pdf" target="_blank">https://www.spaceoffice.nl/files/SBIR/RVO_mutatieherkenning.pdf</a></p>
+    </div>
+</li>
+
+<li><span class='project-name' onclick="toggleDetails('84-NL-Veranderdetectie-Wateroverlast')">NL Veranderdetectie</span>
+    <div id="details-84-NL-Veranderdetectie-Wateroverlast" class="details">
+        <p><strong>Hoofduitvoerder:</strong> Rijkswaterstaat</p>
+        <p><strong>Samenvatting:</strong> Het project NL Veranderdetectie richt zich op het slimmer en efficiënter toezicht houden en handhaven van veranderingen in waterlopen en waterkeringen met behulp van satelliet- en luchtfoto's. Het levert mutatiekaarten op basis van hoge resolutie beelden.</p>
+        <p><strong>Bereik:</strong> Nederland</p>
+        <p><strong>Financieringsbron:</strong> fryslan Fernijt IV, Ministerie van Economische Zaken, Samenwerkingsverband Noord Nederland, Provincie Fryslan</p>
+        <p><strong>Organisatietype:</strong> Overheid</p>
+        <p><strong>Samenwerkingspartners:</strong> Waterschappen, NSO, STOWA, Het Waterschapshuis</p>
+        <p><strong>Gebruiker:</strong> Rijkswaterstaat, Waterschappen, Waterbeheerders</p>
+        <p><strong>Website:</strong> <a href="nlveranderdetectie.nl" target="_blank">nlveranderdetectie.nl</a></p>
+    </div>
+</li>
+
+<li><span class='project-name' onclick="toggleDetails('85-NL-RIA:-Satellite-based-Altimetry-Data-for-Hydrological-Assessments-Wateroverlast')">NL-RIA: Satellite-based Altimetry Data for Hydrological Assessments</span>
+    <div id="details-85-NL-RIA:-Satellite-based-Altimetry-Data-for-Hydrological-Assessments-Wateroverlast" class="details">
+        <p><strong>Hoofduitvoerder:</strong> TU Delft</p>
+        <p><strong>Samenvatting:</strong> Dit project onderzoekt de uitdagingen en vereisten voor de toepassing van altimeterdata voor waterbeheer. Het doel is om radargerelateerde kennis in Nederland te bundelen en kennishiaten te vullen om SmallSat-radargebaseerde aardobservatietechnologie te verbeteren. Het project omvat case studies en aanbevelingen voor de ontwerpvereisten van een altimetrische missie.</p>
+        <p><strong>Bereik:</strong> Nederland</p>
+        <p><strong>Financieringsbron:</strong> PIPP , NOW, NSO</p>
+        <p><strong>Organisatietype:</strong> Bedrijf</p>
+        <p><strong>Samenwerkingspartners:</strong> FutureWater, Netherlands Organisation for Scientific Research (NWO), Robin Radar Systems, RFx solutions, TNO Defence and Security, KNMI, ESA, Swartvast, ISISpace, TNO, University of Twente, Radboud University, VU Amsterdam, NLR, RHEA Group, Delft Dynamics, Hiber, MetaSensing, Rijkswaterstaat</p>
+        <p><strong>Gebruiker:</strong> Waterbeheerders, beleidsmakers, ingenieurs</p>
+        <p><strong>Website:</strong> <a href="https://www.futurewater.nl/projects/nl-ria-satellite-based-altimetry-data-for-hydrological-assessments-nl/" target="_blank">https://www.futurewater.nl/projects/nl-ria-satellite-based-altimetry-data-for-hydrological-assessments-nl/</a></p>
+    </div>
+</li>
+
+<li><span class='project-name' onclick="toggleDetails('86-Nationale-Regenradar-Wateroverlast')">Nationale Regenradar</span>
+    <div id="details-86-Nationale-Regenradar-Wateroverlast" class="details">
+        <p><strong>Hoofduitvoerder:</strong> Royal HaskoningDHV</p>
+        <p><strong>Samenvatting:</strong> De Nationale Regenradar (NRR) biedt gedetailleerde neerslaginformatie, inclusief gegevens van radarposten in Nederland, België en Duitsland. Dit helpt waterbeheerders bij het effectief beheren van hun gebied en het voorkomen van wateroverlast. De NRR maakt gebruik van data van het KNMI en biedt een intuïtieve webapplicatie voor realtime en historische neerslaggegevens.</p>
+        <p><strong>Bereik:</strong> Nederland</p>
+        <p><strong>Financieringsbron:</strong> Eigen Financiering,  Nelen & Schuurmans, Infoplaza, AMO meteo</p>
+        <p><strong>Organisatietype:</strong> Bedrijf</p>
+        <p><strong>Samenwerkingspartners:</strong> Royal HaskoningDHV, Nelen & Schuurmans, Infoplaza, Amo meteo, KNMI, Deltares, Wageningen Universiteit, Universiteit Utrecht en de TU Delft</p>
+        <p><strong>Gebruiker:</strong> Weerinstituten, Waterbeheerders, Gemeenten, Landbouwers</p>
+        <p><strong>Website:</strong> <a href="https://nationaleregenradar.nl/" target="_blank">https://nationaleregenradar.nl/</a></p>
+    </div>
+</li>
+
+<li><span class='project-name' onclick="toggleDetails('87-Neerslagradar-Wateroverlast')">Neerslagradar</span>
+    <div id="details-87-Neerslagradar-Wateroverlast" class="details">
+        <p><strong>Hoofduitvoerder:</strong> KNMI</p>
+        <p><strong>Samenvatting:</strong> De neerslagradar van het KNMI toont momentopnames van het weer in Nederland en de nabije omgeving. Het systeem meet de intensiteit van neerslag door radarpulsen uit te zenden en de teruggekaatste signalen te analyseren. Dit helpt bij het inschatten van waar en wanneer neerslag zal vallen.</p>
+        <p><strong>Bereik:</strong> Nederland</p>
+        <p><strong>Financieringsbron:</strong> Eigen financiering</p>
+        <p><strong>Organisatietype:</strong> Overheid</p>
+        <p><strong>Samenwerkingspartners:</strong> -</p>
+        <p><strong>Gebruiker:</strong> Waterbeheerders, beleidsmakers, meteorologen, agrariërs, stadsplanners, hulpdiensten, algemene bevolking</p>
+        <p><strong>Website:</strong> <a href="https://www.knmi.nl/kennis-en-datacentrum/achtergrond/neerslagradar-knmi-uitgebreide-toelichting" target="_blank">https://www.knmi.nl/kennis-en-datacentrum/achtergrond/neerslagradar-knmi-uitgebreide-toelichting</a></p>
+    </div>
+</li>
+
+<li><span class='project-name' onclick="toggleDetails('91-OWASIS-Wateroverlast')">OWASIS</span>
+    <div id="details-91-OWASIS-Wateroverlast" class="details">
+        <p><strong>Hoofduitvoerder:</strong> Hydrologic</p>
+        <p><strong>Samenvatting:</strong> OWASIS biedt operationele informatieproducten voor het monitoren van bodemvocht, grondwaterstand en beschikbare bodemberging. Dit helpt waterbeheerders om effectievere operationele beslissingen te nemen over het aanvoeren of vasthouden van water, vooral tijdens droge of natte periodes.</p>
+        <p><strong>Bereik:</strong> Mondiaal</p>
+        <p><strong>Financieringsbron:</strong> STOWA, ESA, NSO</p>
+        <p><strong>Organisatietype:</strong> Bedrijf</p>
+        <p><strong>Samenwerkingspartners:</strong> Hoogheemraadschap De Stichtse Rijnlanden, WENR, Rijkswaterstaat</p>
+        <p><strong>Gebruiker:</strong> Waterbeheerders, beleidsmakers</p>
+        <p><strong>Website:</strong> <a href="https://www.owasis.nl/over-owasis/" target="_blank">https://www.owasis.nl/over-owasis/</a></p>
+    </div>
+</li>
+
+<li><span class='project-name' onclick="toggleDetails('92-PROTECT;-WP7-Regional-sea-level-change-&-implications-Wateroverlast')">PROTECT; WP7 Regional sea-level change & implications</span>
+    <div id="details-92-PROTECT;-WP7-Regional-sea-level-change-&-implications-Wateroverlast" class="details">
+        <p><strong>Hoofduitvoerder:</strong> NIOZ</p>
+        <p><strong>Samenvatting:</strong> PROTECT heeft als doel om veranderingen in de landgebaseerde cryosfeer te beoordelen en projecteren, met gekwantificeerde onzekerheden. Het project produceert robuuste mondiale, regionale en lokale projecties van zeespiegelstijging (SLR) op verschillende tijdschalen.</p>
+        <p><strong>Bereik:</strong> Europa</p>
+        <p><strong>Financieringsbron:</strong> Europese Gemeenschap</p>
+        <p><strong>Organisatietype:</strong> Instituut</p>
+        <p><strong>Samenwerkingspartners:</strong> -</p>
+        <p><strong>Gebruiker:</strong> Beleidsmakers, kustplanners, wetenschappers, klimaatonderzoekers, Europese en lokale overheden</p>
+        <p><strong>Website:</strong> <a href="https://www.nioz.nl/en/research/projects/4483-7" target="_blank">https://www.nioz.nl/en/research/projects/4483-7</a></p>
+    </div>
+</li>
+
+<li><span class='project-name' onclick="toggleDetails('96-Proef-met-drone-Wateroverlast')">Proef met drone</span>
+    <div id="details-96-Proef-met-drone-Wateroverlast" class="details">
+        <p><strong>Hoofduitvoerder:</strong> Waterschap Hunze en Aa's</p>
+        <p><strong>Samenvatting:</strong> Het waterschap Hunze en Aa's gaat experimenteren met de inzet van drones voor verschillende taken, waaronder inspecties van dijken en taluds, handhaving, calamiteiten, landmeetkundige werkzaamheden, opsporen van blauwalg en beverbeheer. De drone kan moeilijk bereikbare plekken bereiken en biedt hoge resolutie opnamen.</p>
+        <p><strong>Bereik:</strong> Nederland</p>
+        <p><strong>Financieringsbron:</strong> Eigen financiering</p>
+        <p><strong>Organisatietype:</strong> Overheid</p>
+        <p><strong>Samenwerkingspartners:</strong> -</p>
+        <p><strong>Gebruiker:</strong> Medewerkers van Hunze en Aa's, beleidsmakers, agrariërs, natuurbeheerders</p>
+        <p><strong>Website:</strong> <a href="hunzeenaas.nl" target="_blank">hunzeenaas.nl</a></p>
+    </div>
+</li>
+
+<li><span class='project-name' onclick="toggleDetails('101-Sat4Flood-Wateroverlast')">Sat4Flood</span>
+    <div id="details-101-Sat4Flood-Wateroverlast" class="details">
+        <p><strong>Hoofduitvoerder:</strong> Miramap</p>
+        <p><strong>Samenvatting:</strong> Sat4Flood visualiseert wereldwijd de risico's van dijkfalen op basis van de meest recente satellietgegevens. Het combineert hoge-resolutie bodemvochtdata met InSAR-deformatiedata en andere aardobservatiegegevens om overstromingsrisico's te identificeren en te visualiseren.</p>
+        <p><strong>Bereik:</strong> Mondiaal</p>
+        <p><strong>Financieringsbron:</strong> ESA InCubed programma</p>
+        <p><strong>Organisatietype:</strong> Bedrijf</p>
+        <p><strong>Samenwerkingspartners:</strong> SkyGeo, 52Impact</p>
+        <p><strong>Gebruiker:</strong> Waterautoriteiten, gemeenten, steden en regio's, crisismanagement/ hulporganisaties, verzekeringsmaatschappijen, vastgoedontwikkeling, mijnbouwbedrijven, internationale organisaties (VN, Wereldbank), internationale ingenieursbureaus</p>
+        <p><strong>Website:</strong> <a href="https://incubed.esa.int/portfolio/sat4flood/" target="_blank">https://incubed.esa.int/portfolio/sat4flood/</a></p>
+    </div>
+</li>
+
+<li><span class='project-name' onclick="toggleDetails('104-SatWater-Wateroverlast')">SatWater</span>
+    <div id="details-104-SatWater-Wateroverlast" class="details">
+        <p><strong>Hoofduitvoerder:</strong> STOWA</p>
+        <p><strong>Samenvatting:</strong> SatWater richt zich op het verbeteren van de kwaliteit van dagelijks beschikbare verdampingsinformatie, zelfs onder bewolkte omstandigheden. Het project maakt gebruik van satellietdata om actuele en voorspellende verdampingsinformatie en bodemvochtprofielen te leveren voor waterbeheer.</p>
+        <p><strong>Bereik:</strong> Nederland</p>
+        <p><strong>Financieringsbron:</strong> SBIR door NSO</p>
+        <p><strong>Organisatietype:</strong> Overheid</p>
+        <p><strong>Samenwerkingspartners:</strong> ESA, NSO, waterschappen</p>
+        <p><strong>Gebruiker:</strong> Waterschappen, Ministerie van Economische Zaken en Klimaat, Ministerie van Onderwijs, Cultuur en Wetenschap, Ministerie van Infrastructuur en Waterstaat, NWO</p>
+        <p><strong>Website:</strong> <a href="https://www.stowa.nl/sat-water" target="_blank">https://www.stowa.nl/sat-water</a></p>
+    </div>
+</li>
+
+<li><span class='project-name' onclick="toggleDetails('106-Satellietdataportaal-Wateroverlast')">Satellietdataportaal</span>
+    <div id="details-106-Satellietdataportaal-Wateroverlast" class="details">
+        <p><strong>Hoofduitvoerder:</strong> NSO</p>
+        <p><strong>Samenvatting:</strong> Het Satellietdataportaal biedt kosteloos toegang tot hoge resolutie satellietbeelden voor bedrijven, personen en instanties in Nederland. Het portaal biedt zowel voorbewerkte als ruwe satellietdata die kunnen worden gebruikt in GIS-toepassingen en voor verschillende monitoringdoeleinden.</p>
+        <p><strong>Bereik:</strong> Nederland</p>
+        <p><strong>Financieringsbron:</strong> Eigen financiering</p>
+        <p><strong>Organisatietype:</strong> Overheid</p>
+        <p><strong>Samenwerkingspartners:</strong> -</p>
+        <p><strong>Gebruiker:</strong> Bedrijven, particulieren, instanties in Nederland</p>
+        <p><strong>Website:</strong> <a href="satellietdataportaal.nl" target="_blank">satellietdataportaal.nl</a></p>
+    </div>
+</li>
+
+<li><span class='project-name' onclick="toggleDetails('109-SignalEyes-Wateroverlast')">SignalEyes</span>
+    <div id="details-109-SignalEyes-Wateroverlast" class="details">
+        <p><strong>Hoofduitvoerder:</strong> NEO</p>
+        <p><strong>Samenvatting:</strong> SignalEyes is een infrastructuur voor mutatiesignalering die gebruikmaakt van aardobservatie, publieksmeldingen en Open Data. Het systeem detecteert veranderingen in bomen, zonnepanelen, gebouwen, wegen, watervlakken en percelen met behulp van AI.</p>
+        <p><strong>Bereik:</strong> Nederland</p>
+        <p><strong>Financieringsbron:</strong> ESA InCubed programma</p>
+        <p><strong>Organisatietype:</strong> Bedrijf</p>
+        <p><strong>Samenwerkingspartners:</strong> ESA InCubed, diverse Nederlandse overheden</p>
+        <p><strong>Gebruiker:</strong> Nederlandse overheden, waterbeheerders, beleidsmakers</p>
+        <p><strong>Website:</strong> <a href="https://www.neo.nl/monitoring-nederland/" target="_blank">https://www.neo.nl/monitoring-nederland/</a></p>
+    </div>
+</li>
+
+<li><span class='project-name' onclick="toggleDetails('111-Stedelijke-Ontwikkeling-in-Delta's-Wateroverlast')">Stedelijke Ontwikkeling in Delta's</span>
+    <div id="details-111-Stedelijke-Ontwikkeling-in-Delta's-Wateroverlast" class="details">
+        <p><strong>Hoofduitvoerder:</strong> NSO</p>
+        <p><strong>Samenvatting:</strong> Dit project richt zich op stedelijke ontwikkeling en beheer in delta's, met speciale aandacht voor monitoring van stedelijke ontwikkeling, leefomgevingskwaliteit, hoogteligging, bodemdaling en waterpeilmonitoring. Het project maakt gebruik van satellietdata om overstromingsrisico's en infrastructuurproblemen te analyseren en oplossingen te bieden.</p>
+        <p><strong>Bereik:</strong> Nederland</p>
+        <p><strong>Financieringsbron:</strong> SBIR door NSO</p>
+        <p><strong>Organisatietype:</strong> Overheid</p>
+        <p><strong>Samenwerkingspartners:</strong> Gemeente Schiedam</p>
+        <p><strong>Gebruiker:</strong> Gemeenten, Stadsplanners</p>
+        <p><strong>Website:</strong> <a href="https://www.spaceoffice.nl/files/SBIR/VA_delta.pdf" target="_blank">https://www.spaceoffice.nl/files/SBIR/VA_delta.pdf</a></p>
+    </div>
+</li>
+
+<li><span class='project-name' onclick="toggleDetails('116-TopSoil-Wateroverlast')">TopSoil</span>
+    <div id="details-116-TopSoil-Wateroverlast" class="details">
+        <p><strong>Hoofduitvoerder:</strong> Region Midtjylland</p>
+        <p><strong>Samenvatting:</strong> TopSoil richt zich op de impact van klimaatverandering op bodem- en grondwatercondities. Het project onderzoekt en modelleert de bovenste 20-30 meter van de bodem om waterkwaliteit te verbeteren en overstromingen te verminderen. Het omvat diverse pilotprojecten in de Noordzeeregio.</p>
+        <p><strong>Bereik:</strong> Europa</p>
+        <p><strong>Financieringsbron:</strong> Europese Unie (Interreg VB North Sea Region)</p>
+        <p><strong>Organisatietype:</strong> Overheid</p>
+        <p><strong>Samenwerkingspartners:</strong> Vlaamse Milieumaatschappij, Herning Kommune, Provincie Drenthe, Leibniz-Institut fÃ¼r Angewandte Geophysik, The Rivers Trust, en anderen</p>
+        <p><strong>Gebruiker:</strong> Gemeentelijke waterbeheerders, Landbouwers, Milieuorganisaties</p>
+        <p><strong>Website:</strong> <a href="https://www.vmm.be/water/projecten/topsoil" target="_blank">https://www.vmm.be/water/projecten/topsoil</a></p>
+    </div>
+</li>
+
+<li><span class='project-name' onclick="toggleDetails('119-Vegetatiemonitor-Wateroverlast')">Vegetatiemonitor</span>
+    <div id="details-119-Vegetatiemonitor-Wateroverlast" class="details">
+        <p><strong>Hoofduitvoerder:</strong> Rijkswaterstaat</p>
+        <p><strong>Samenvatting:</strong> Het project richt zich op het monitoren van de staat van de vegetatie in de uiterwaarden van het Nederlandse rivierengebied. De Vegetatiemonitor maakt gebruik van satellietdata om de vegetatie te classificeren en te vergelijken met de vegetatielegger, om afwijkingen te detecteren.</p>
+        <p><strong>Bereik:</strong> Nederland</p>
+        <p><strong>Financieringsbron:</strong> Eigen financiering</p>
+        <p><strong>Organisatietype:</strong> Overheid</p>
+        <p><strong>Samenwerkingspartners:</strong> Deltares</p>
+        <p><strong>Gebruiker:</strong> Rijkswaterstaat, Natuurbeheerders, Waterbeheerders</p>
+        <p><strong>Website:</strong> <a href="https://vegetatiemonitor.rijkswaterstaat.nl/#/veld" target="_blank">https://vegetatiemonitor.rijkswaterstaat.nl/#/veld</a></p>
+    </div>
+</li>
+
+<li><span class='project-name' onclick="toggleDetails('120-Verhardingsmonitor-Wateroverlast')">Verhardingsmonitor</span>
+    <div id="details-120-Verhardingsmonitor-Wateroverlast" class="details">
+        <p><strong>Hoofduitvoerder:</strong> NEO</p>
+        <p><strong>Samenvatting:</strong> De Verhardingsmonitor categoriseert en monitort de verharding van het grondoppervlak in Nederland. Het maakt gebruik van satellietbeelden en luchtfoto's om veranderingen te detecteren en te helpen anticiperen op wateroverlast en klimaatadaptatie.</p>
+        <p><strong>Bereik:</strong> Nederland</p>
+        <p><strong>Financieringsbron:</strong> Eigen financiering</p>
+        <p><strong>Organisatietype:</strong> Bedrijf</p>
+        <p><strong>Samenwerkingspartners:</strong> -</p>
+        <p><strong>Gebruiker:</strong> Waterbeheerders, beleidsmakers, gemeenten, steden</p>
+        <p><strong>Website:</strong> <a href="https://www.neo.nl/neo-verhardingsmonitor/" target="_blank">https://www.neo.nl/neo-verhardingsmonitor/</a></p>
+    </div>
+</li>
+
+<li><span class='project-name' onclick="toggleDetails('121-Vliegen-met-drones-Wateroverlast')">Vliegen met drones</span>
+    <div id="details-121-Vliegen-met-drones-Wateroverlast" class="details">
+        <p><strong>Hoofduitvoerder:</strong> Waternet</p>
+        <p><strong>Samenvatting:</strong> Met drones inspecteert Waternet assets zoals gevels, daken en zonnepanelen. Samen met Natuurmonumenten en RUDNHN monitort Waternet het Naardermeer. Een waterstofdrone verlengt de vliegtijd tot een uur. Deelname aan Amsterdam Drone Week versterkt de samenwerking en innovatie.</p>
+        <p><strong>Bereik:</strong> Nederland</p>
+        <p><strong>Financieringsbron:</strong> Eigen financiering</p>
+        <p><strong>Organisatietype:</strong> Overheid</p>
+        <p><strong>Samenwerkingspartners:</strong> Natuurmonumenten, Regionale Uitvoeringsdienst Noord-Holland Noord</p>
+        <p><strong>Gebruiker:</strong> Waternet medewerkers, Natuurmonumenten, Regionale Uitvoeringsdienst Noord-Holland Noord (RUDNHN), zonnepaneeleigenaren en beheerders, beleidsmakers en regelgevers</p>
+        <p><strong>Website:</strong> <a href="https://www.waternet.nl/innovatie/Technologie/drones--nieuwe-projecten/" target="_blank">https://www.waternet.nl/innovatie/Technologie/drones--nieuwe-projecten/</a></p>
+    </div>
+</li>
+
+<li><span class='project-name' onclick="toggleDetails('122-WADIM-(Water-systems-Detection-Identification-and-Monitoring)-Wateroverlast')">WADIM (Water systems Detection Identification and Monitoring)</span>
+    <div id="details-122-WADIM-(Water-systems-Detection-Identification-and-Monitoring)-Wateroverlast" class="details">
+        <p><strong>Hoofduitvoerder:</strong> Nelen & Schuurmans</p>
+        <p><strong>Samenvatting:</strong> WADIM is een innovatieve informatiedienst die gebruikmaakt van satellietdata en GIS-analyse om veranderingen in watersystemen te detecteren en te rapporteren aan waterbeheerders. Dit helpt bij beleidsvorming, wateranalyse, beheer en onderhoud.</p>
+        <p><strong>Bereik:</strong> Nederland</p>
+        <p><strong>Financieringsbron:</strong> SBIR door NSO</p>
+        <p><strong>Organisatietype:</strong> Bedrijf</p>
+        <p><strong>Samenwerkingspartners:</strong> NEO, Rijkswaterstaat</p>
+        <p><strong>Gebruiker:</strong> Waterbeheerders, Rijkswaterstaat, hydrologen, geo-specialisten, supervisors</p>
+        <p><strong>Website:</strong> <a href="https://nelen-schuurmans.nl/en/case/wadim-watersystems-detection-identification-and-monitoring/" target="_blank">https://nelen-schuurmans.nl/en/case/wadim-watersystems-detection-identification-and-monitoring/</a></p>
+    </div>
+</li>
+
+<li><span class='project-name' onclick="toggleDetails('126-Waarschuwing-voor-WaterOverlast-(W2O)-Wateroverlast')">Waarschuwing voor WaterOverlast (W2O)</span>
+    <div id="details-126-Waarschuwing-voor-WaterOverlast-(W2O)-Wateroverlast" class="details">
+        <p><strong>Hoofduitvoerder:</strong> Weather Impact</p>
+        <p><strong>Samenvatting:</strong> W2O is een klimaat-adaptieve dienst die lokale overheden ondersteunt met voorspellingen van het risico op wateroverlast door extreme neerslag. Het systeem combineert meteorologische en hydrologische data om nauwkeurige waarschuwingen te geven.</p>
+        <p><strong>Bereik:</strong> Nederland</p>
+        <p><strong>Financieringsbron:</strong> SBIR door NSO</p>
+        <p><strong>Organisatietype:</strong> Bedrijf</p>
+        <p><strong>Samenwerkingspartners:</strong> HydroLogic, KNMI, diverse waterschappen en gemeenten</p>
+        <p><strong>Gebruiker:</strong> Gemeenten, waterschappen, beleidsmakers</p>
+        <p><strong>Website:</strong> <a href="Waarschuwing voor WaterOverlast" target="_blank">Waarschuwing voor WaterOverlast</a></p>
+    </div>
+</li>
+
+<li><span class='project-name' onclick="toggleDetails('130-Water-scenarios-For-Copernicus-Exploitation-(Water-ForCE)-Wateroverlast ')">Water scenarios For Copernicus Exploitation (Water-ForCE)</span>
+    <div id="details-130-Water-scenarios-For-Copernicus-Exploitation-(Water-ForCE)-Wateroverlast " class="details">
+        <p><strong>Hoofduitvoerder:</strong> University of Tartu</p>
+        <p><strong>Samenvatting:</strong> Water-ForCE ontwikkelt een Roadmap voor de toekomstige fase van Copernicus Inland Water Services, met input van ruimtevaart, onderzoek, beleid, industrie en de derde sector. Het project richt zich op de integratie van in situ en remote sensing observaties en het verbeteren van watergerelateerde diensten.</p>
+        <p><strong>Bereik:</strong> Europa</p>
+        <p><strong>Financieringsbron:</strong> Horizon 2020</p>
+        <p><strong>Organisatietype:</strong> Universiteit</p>
+        <p><strong>Samenwerkingspartners:</strong> University of Tartu, Stichting dotSPACE, isardSAT, Antea Belgium, Plymouth Marine Laboratory, Leibniz Institute of Freshwater Ecology and Inland Fisheries, GeoEcoMar, Institute of Communication and Computer Systems, University of Stirling, IHE Delft Institute for Water Education, Estonian University of Life Sciences, National Institute of Research and Development for Biological Sciences, Vrije Universiteit Brussel, 3edata, National Research Council - Institute for Electromagnetic Sensing of the Environment, VITO, University of Natural Resources and Life Sciences (Vienna), Centro de Investigacion Ecologica y Aplicaciones Forestales, Sinergise, Water Insight.</p>
+        <p><strong>Gebruiker:</strong> Beleidsmakers, Wetenschappers, Milieuorganisaties</p>
+        <p><strong>Website:</strong> <a href="https://waterforce.eu/" target="_blank">https://waterforce.eu/</a></p>
+    </div>
+</li>
+
+<li><span class='project-name' onclick="toggleDetails('131-Waterstanden-meten-met-ICESat-2-Wateroverlast')">Waterstanden meten met ICESat-2</span>
+    <div id="details-131-Waterstanden-meten-met-ICESat-2-Wateroverlast" class="details">
+        <p><strong>Hoofduitvoerder:</strong> HKV</p>
+        <p><strong>Samenvatting:</strong> Dit project maakt gebruik van de ICESat-2 satelliet om waterstanden nauwkeurig te meten vanuit de ruimte. Door de toepassing van een laserhoogtemeter kunnen waterstanden in bemeten en onbemeten waterlopen worden gemeten. Dit helpt bij het monitoren van watersystemen, zowel in Nederland als wereldwijd.</p>
+        <p><strong>Bereik:</strong> Mondiaal</p>
+        <p><strong>Financieringsbron:</strong> Eigen financiering</p>
+        <p><strong>Organisatietype:</strong> Bedrijf</p>
+        <p><strong>Samenwerkingspartners:</strong> NASA, Rijkswaterstaat, Hoogheemraadschap Delfland</p>
+        <p><strong>Gebruiker:</strong> Waterbeheerders, beleidsmakers, onderzoeksinstituten</p>
+        <p><strong>Website:</strong> <a href="https://www.hkv.nl/actueel/waterstanden-meten-met-icesat-2/" target="_blank">https://www.hkv.nl/actueel/waterstanden-meten-met-icesat-2/</a></p>
+    </div>
+</li>
+
+<li><span class='project-name' onclick="toggleDetails('134-WorldWater-Wateroverlast')">WorldWater</span>
+    <div id="details-134-WorldWater-Wateroverlast" class="details">
+        <p><strong>Hoofduitvoerder:</strong> DHI GRAS</p>
+        <p><strong>Samenvatting:</strong> Het WorldWater-project ontwikkelt innovatieve EO tools voor het monitoren van seizoens- en jaarlijkse dynamiek van binnenlandse oppervlaktewateren. Het doel is om nationale autoriteiten en stroomgebiedorganisaties te voorzien van geavanceerde EO-technologie om hun waterbronnen beter te beheren en te rapporteren over de wereldwijde wateragenda.</p>
+        <p><strong>Bereik:</strong> Mondiaal</p>
+        <p><strong>Financieringsbron:</strong> ESA</p>
+        <p><strong>Organisatietype:</strong> Bedrijf</p>
+        <p><strong>Samenwerkingspartners:</strong> GeoVille GmbH, GISAT, GRID-Arendal, Technische Universiteit van Denemarken</p>
+        <p><strong>Gebruiker:</strong> Nationale overheden, rivierbekkenorganisaties, waterbeheerders</p>
+        <p><strong>Website:</strong> <a href="https://worldwater.earth/" target="_blank">https://worldwater.earth/</a></p>
+    </div>
+</li>
+</ul></div>
+
+<footer>Het NSO voert de kennisnetwerkenregeling uit in samenwerking met de NWO, met financiering van het ministerie van OCW.</footer>
 </body>
 </html>
-'''
-
-if __name__ == '__main__':
-    app.run(debug=True)
