@@ -1,8 +1,17 @@
 import pandas as pd
+import requests
 
-# Lees de data uit het Excel-bestand
-file_path = 'Split_KennisNetwerk_Projects_version4.xlsx'
-df = pd.read_excel(file_path)
+# URL van de gepubliceerde Google Spreadsheet CSV-export
+google_sheet_url = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSYIGb-aEpKn2dUjunFaE-E4zNQAyRyCAhFDggR5FCS1Pow01nEObLPw_zSgNr137ucmQIb_bfFFwUA/pubhtml'
+csv_export_url = google_sheet_url.replace('/edit?usp=sharing', '/export?format=csv')
+
+# Download de CSV-gegevens
+response = requests.get(csv_export_url)
+with open('spreadsheet.csv', 'wb') as file:
+    file.write(response.content)
+
+# Lees de data uit het CSV-bestand
+df = pd.read_csv('spreadsheet.csv')
 
 # Begin van de HTML inhoud
 html_content = """
