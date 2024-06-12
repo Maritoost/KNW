@@ -12,7 +12,7 @@ with open('spreadsheet.csv', 'wb') as file:
 # Lees de data uit het CSV-bestand
 df = pd.read_csv('spreadsheet.csv')
 
-# Begin van de HTML inhoud
+# Begin van de HTML inhoud met inline CSS
 html_content = """
 <!DOCTYPE html>
 <html lang="nl">
@@ -20,7 +20,13 @@ html_content = """
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Kennisnetwerk Water</title>
-    <link rel="stylesheet" href="style.css">
+    <style>
+        body { font-family: Arial, sans-serif; margin: 0; padding: 20px; background-color: #f4f4f4; }
+        .focusgebieden { display: flex; flex-wrap: wrap; }
+        .project { background: white; padding: 15px; margin: 10px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1); flex: 1; min-width: 300px; }
+        .project h2 { margin-top: 0; }
+        .project p { margin: 5px 0; }
+    </style>
 </head>
 <body>
     <h1>Kennisnetwerk Water</h1>
