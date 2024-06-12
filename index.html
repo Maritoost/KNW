@@ -36,8 +36,15 @@
             element.classList.toggle('hidden');
             lastVisible = element.classList.contains('hidden') ? null : element;
         }
+        async function fetchExcel() {
+            const url = 'https://raw.githubusercontent.com/Maritoost/KNW/main/Split_KennisNetwerk_Projects_version4.xlsx';
+            const response = await fetch(url);
+            const arrayBuffer = await response.arrayBuffer();
+            const data = new Uint8Array(arrayBuffer);
+            processExcel(data);
+        }
         function processExcel(data) {
-            const workbook = XLSX.read(data, {type: 'binary'});
+            const workbook = XLSX.read(data, { type: 'array' });
             const sheetName = workbook.SheetNames[0];
             const sheet = workbook.Sheets[sheetName];
             const json = XLSX.utils.sheet_to_json(sheet);
@@ -62,7 +69,7 @@
                             <p><strong>Website:</strong> <a href="${row.Website}" target="_blank">${row.Website}</a></p>
                         </div>
                     </li>`;
-                
+
                 const focusAreas = row.Focusgebied.split(', ');
                 focusAreas.forEach(focusArea => {
                     if (projectSections[focusArea]) {
@@ -75,30 +82,20 @@
             document.getElementById('waterkwaliteit-projects').innerHTML = `<ul>${projectSections['Waterkwaliteit']}</ul>`;
             document.getElementById('wateroverlast-projects').innerHTML = `<ul>${projectSections['Wateroverlast']}</ul>`;
         }
-
-        function handleFile(event) {
-            const file = event.target.files[0];
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                const data = e.target.result;
-                processExcel(data);
-            };
-            reader.readAsBinaryString(file);
-        }
+        window.onload = fetchExcel;
     </script>
 </head>
 <body>
-<h1>Kennisnetwerk Water</h1>
-<p style="font-size: 24px; font-weight: bold;">Focusgebieden:</p>
-<div class="bubble" id="droogte" onclick="toggleVisibility('droogte')">Droogte</div>
-<div class="bubble" id="waterkwaliteit" onclick="toggleVisibility('waterkwaliteit')">Waterkwaliteit</div>
-<div class="bubble" id="wateroverlast" onclick="toggleVisibility('wateroverlast')">Wateroverlast</div>
+    <h1>Kennisnetwerk Water</h1>
+    <p style="font-size: 24px; font-weight: bold;">Focusgebieden:</p>
+    <div class="bubble" id="droogte" onclick="toggleVisibility('droogte')">Droogte</div>
+    <div class="bubble" id="waterkwaliteit" onclick="toggleVisibility('waterkwaliteit')">Waterkwaliteit</div>
+    <div class="bubble" id="wateroverlast" onclick="toggleVisibility('wateroverlast')">Wateroverlast</div>
 
-<input type="file" id="fileInput" onchange="handleFile(event)" />
-<div id='droogte-projects' class='hidden'><ul></ul></div>
-<div id='waterkwaliteit-projects' class='hidden'><ul></ul></div>
-<div id='wateroverlast-projects' class='hidden'><ul></ul></div>
+    <div id='droogte-projects' class='hidden'><ul></ul></div>
+    <div id='waterkwaliteit-projects' class='hidden'><ul></ul></div>
+    <div id='wateroverlast-projects' class='hidden'><ul></ul></div>
 
-<footer>Het NSO voert de kennisnetwerkenregeling uit in samenwerking met de NWO, met financiering van het ministerie van OCW.</footer>
+    <footer>Het NSO voert de kennisnetwerkenregeling uit in samenwerking met de NWO, met financiering van het ministerie van OCW.</footer>
 </body>
 </html>
