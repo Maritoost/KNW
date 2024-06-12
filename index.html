@@ -19,6 +19,8 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.17.0/xlsx.full.min.js"></script>
 <script>
     let lastOpen = null;
+    let lastVisible = null;
+
     function toggleDetails(projectId) {
         const details = document.getElementById(`details-${projectId}`);
         if (lastOpen && lastOpen !== details) {
@@ -27,7 +29,7 @@
         details.style.display = details.style.display === 'none' ? 'block' : 'none';
         lastOpen = details.style.display === 'none' ? null : details;
     }
-    let lastVisible = null;
+
     function toggleVisibility(focusArea) {
         const element = document.getElementById(focusArea + "-projects");
         if (lastVisible && lastVisible !== element) {
@@ -36,6 +38,7 @@
         element.classList.toggle('hidden');
         lastVisible = element.classList.contains('hidden') ? null : element;
     }
+
     async function fetchExcel() {
         const url = 'https://raw.githubusercontent.com/Maritoost/KNW/main/Split_KennisNetwerk_Projects_version4.xlsx';
         const response = await fetch(url);
@@ -47,6 +50,7 @@
         const data = new Uint8Array(arrayBuffer);
         processExcel(data);
     }
+
     function processExcel(data) {
         const workbook = XLSX.read(data, { type: 'array' });
         const sheetName = workbook.SheetNames[0];
@@ -61,7 +65,7 @@
 
         json.forEach((row, index) => {
             const projectHtml = `
-                <li><span class='project-name' onclick="toggleDetails('${index}-${row.Projectnaam.replace(/\s+/g, '-')}')">${row.Projectnaam}</span>
+                <li class='project'><span class='project-name' onclick="toggleDetails('${index}-${row.Projectnaam.replace(/\s+/g, '-')}')">${row.Projectnaam}</span>
                     <div id="details-${index}-${row.Projectnaam.replace(/\s+/g, '-')}" class="details">
                         <p><strong>Hoofduitvoerder:</strong> ${row.Hoofduitvoerder}</p>
                         <p><strong>Samenvatting:</strong> ${row.Samenvatting}</p>
@@ -86,6 +90,7 @@
         document.getElementById('waterkwaliteit-projects').innerHTML = `<ul>${projectSections['Waterkwaliteit']}</ul>`;
         document.getElementById('wateroverlast-projects').innerHTML = `<ul>${projectSections['Wateroverlast']}</ul>`;
     }
+
     window.onload = fetchExcel;
 </script>
 </head>
@@ -96,9 +101,9 @@
 <div class="bubble" id="waterkwaliteit" onclick="toggleVisibility('waterkwaliteit')">Waterkwaliteit</div>
 <div class="bubble" id="wateroverlast" onclick="toggleVisibility('wateroverlast')">Wateroverlast</div>
 
-<div id='droogte-projects' class='hidden'><ul></ul></div>
-<div id='waterkwaliteit-projects' class='hidden'><ul></ul></div>
-<div id='wateroverlast-projects' class='hidden'><ul></ul></div>
+<div id='droogte-projects' class='hidden'></div>
+<div id='waterkwaliteit-projects' class='hidden'></div>
+<div id='wateroverlast-projects' class='hidden'></div>
 
 <footer>Het NSO voert de kennisnetwerkenregeling uit in samenwerking met de NWO, met financiering van het ministerie van OCW.</footer>
 </body>
