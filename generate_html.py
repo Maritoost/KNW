@@ -2,11 +2,10 @@ import pandas as pd
 import requests
 
 # URL van de gepubliceerde Google Spreadsheet CSV-export
-google_sheet_url = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSYIGb-aEpKn2dUjunFaE-E4zNQAyRyCAhFDggR5FCS1Pow01nEObLPw_zSgNr137ucmQIb_bfFFwUA/pubhtml'
-csv_export_url = google_sheet_url.replace('/edit?usp=sharing', '/export?format=csv')
+google_sheet_url = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSYIGb-aEpKn2dUjunFaE-E4zNQAyRyCAhFDggR5FCS1Pow01nEObLPw_zSgNr137ucmQIb_bfFFwUA/pub?gid=1369086145&single=true&output=csv'
 
 # Download de CSV-gegevens
-response = requests.get(csv_export_url)
+response = requests.get(google_sheet_url)
 with open('spreadsheet.csv', 'wb') as file:
     file.write(response.content)
 
