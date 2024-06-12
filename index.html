@@ -37,7 +37,7 @@
         lastVisible = element.classList.contains('hidden') ? null : element;
     }
     async function fetchExcel() {
-        const url = 'https://raw.githubusercontent.com/Maritoost/KNW/main/Split_KennisNetwerk_Projects_version4.xlsx'; // Update this URL to match your file path
+        const url = 'https://raw.githubusercontent.com/Maritoost/KNW/main/Split_KennisNetwerk_Projects_version4.xlsx';
         const response = await fetch(url);
         if (!response.ok) {
             console.error('Failed to fetch the Excel file:', response.statusText);
