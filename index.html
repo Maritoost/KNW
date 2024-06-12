@@ -18,16 +18,8 @@
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.16.9/xlsx.full.min.js"></script>
 <script>
-    let lastOpen = null;
-    function toggleDetails(projectId) {
-        const details = document.getElementById(`details-${projectId}`);
-        if (lastOpen && lastOpen !== details) {
-            lastOpen.style.display = 'none';
-        }
-        details.style.display = details.style.display === 'none' ? 'block' : 'none';
-        lastOpen = details.style.display === 'none' ? null : details;
-    }
     let lastVisible = null;
+
     function toggleVisibility(focusArea) {
         const element = document.getElementById(focusArea + "-projects");
         if (lastVisible && lastVisible !== element) {
@@ -79,6 +71,11 @@
 
     const excelFileUrl = 'https://raw.githubusercontent.com/Maritoost/KNW/main/Split_KennisNetwerk_Projects_version4.xlsx';
     fetchExcelFile(excelFileUrl);
+
+    function toggleDetails(projectId) {
+        const details = document.getElementById(`details-${projectId}`);
+        details.style.display = details.style.display === 'none' ? 'block' : 'none';
+    }
 </script>
 </head>
 <body>
